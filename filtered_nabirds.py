@@ -18,10 +18,6 @@ from torch.utils.tensorboard import SummaryWriter
 import pdb
 from uuid import uuid4
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--n', type=int, required=True)
-args = parser.parse_args()
-
 path = os.getcwd()
 path_id = os.path.join("experiment", '31d84')
 path_load_model = os.path.join(path_id, 'model.pt')
@@ -38,25 +34,25 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-n = args.n
-model.eval()
-os.makedirs(path_save + '/subsample{}'.format(n), exist_ok=False)
-path_imgs = glob.glob(path_data + '/subsample{}/*.jpg'.format(n))
+for n in range(9, 14):
+    model.eval()
+    os.makedirs(path_save + '/subsample{}'.format(n), exist_ok=False)
+    path_imgs = glob.glob(path_data + '/subsample{}/*.jpg'.format(n))
 
-saved = 0
-for file in tqdm_notebook(path_imgs):
+    saved = 0
+    for file in tqdm_notebook(path_imgs):
 
-    img = pil_loader(file)
-    data = data_transforms(img)
-    data = data.unsqueeze(0)
-    if torch.cuda.is_available():
-        data = data.cuda()
-    output = model(data)
-    out = F.softmax(output, dim=-1)
+        img = pil_loader(file)
+        data = data_transforms(img)
+        data = data.unsqueeze(0)
+        if torch.cuda.is_available():
+            data = data.cuda()
+        output = model(data)
+        out = F.softmax(output, dim=-1)
 
-    if torch.max(out, dim=-1)[0].item() > 0.8:
-        saved += 1
-        print('\n' + str(saved))
+        if torch.max(out, dim=-1)[0].item() > 0.8:
+            saved += 1
+            print('\n' + str(saved))
 
-        basename = os.path.basename(file)
-        img.save(path_save + '/subsample{}/'.format(n) + basename, "JPEG")
+            basename = os.path.basename(file)
+            img.save(path_save + '/subsample{}/'.format(n) + basename, "JPEG")
