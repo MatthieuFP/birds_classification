@@ -31,7 +31,7 @@ from uuid import uuid4
 
 def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log_interval, train_unlabeled_loss,
                      train_labeled_loss, stdout, writer, optimizer, n_batches, batch_size, accumulation_steps,
-                     threshold, n_split, strong_augmentation):
+                     threshold, n_split, strong_augmentation, T2, factor):
 
     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
     train_batch_unlabeled_loss = []
@@ -79,7 +79,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             else:
                 output = model(weak_unlabeled_data)
 
-            unlabeled_loss = alpha(epoch, T2=10, factor=2) * criterion(output, pseudo_labels)
+            unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
             unlabeled_loss.backward()
 
             train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
@@ -147,7 +147,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
 
 def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, threshold, n_split, strong_augmentation):
+         early_stopping, writer, stdout, accumulation_steps, threshold, n_split, strong_augmentation, T2, factor):
 
     train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -163,9 +163,10 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
                                                                                    train_labeled_loss, stdout,
                                                                                    writer, optimizer, n_batches,
                                                                                    batch_size, accumulation_steps,
-                                                                                   threshold, n_split, strong_augmentation)
+                                                                                   threshold, n_split, strong_augmentation,
+                                                                                   T2, factor)
 
-        val_loss, accuracy, stdout = validation(model, epoch, val_loader, use_cuda, val_loss, stdout)
+        val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
         scheduler.step()
 
@@ -226,6 +227,8 @@ if __name__ == '__main__':
                                                                      ' considered')
     parser.add_argument('--RUN_ID', type=str, required=True, help="RUN_ID of the pre trained model")
     parser.add_argument('--strong_augmentation', type=int, default=1, help="perform strong augmentation or not")
+    parser.add_argument('--T2', type=int, default=100, help="T2 value")
+    parser.add_argument('--factor', type=int, default=2, help="factor value")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -317,7 +320,7 @@ if __name__ == '__main__':
     model, train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time, stdout = \
         main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
              args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps, args.threshold,
-             args.n_split, args.strong_augmentation)
+             args.n_split, args.strong_augmentation, args.T2, args.factor)
 
     pdb.set_trace()
     results['train_unlabeled_loss'] = train_unlabeled_loss
