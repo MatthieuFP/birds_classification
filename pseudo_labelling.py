@@ -125,6 +125,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
             stdout = logging('Labeled Train Epoch: {} \tLoss: {:.6f}'.format(epoch, train_labeled_loss[-1]), stdout)
 
+            break
+
         # if batch_idx % log_interval == 0:
         #    writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
         #    writer.add_histogram('grad_classifier', model.classifier.weight.grad, n_iter)  # Check classifier gradient
