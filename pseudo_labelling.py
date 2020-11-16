@@ -6,7 +6,7 @@ Created on Sat Nov 7 12:47:39 2020
 @author: matthieufuteral-peter
 """
 
-
+import random
 import argparse
 import json
 import os
@@ -42,90 +42,88 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     model.train()
 
-    for batch_idx, ((weak_unlabeled_data, strong_unlabeled_data), _) in tqdm_notebook(enumerate(unlabeled_loader)):
-        del _  # memory usage
+    for batch_idx in tqdm_notebook(range(n_batches)):
 
-        n_iter = batch_idx + (epoch - 1) * n_batches
+        p = random.random()
+        if p < 2/3:  # 2 unlabeled examples for 1 labaled
 
-        pdb.set_trace()
-        if use_cuda:
-            weak_unlabeled_data = weak_unlabeled_data.cuda()
+            (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
+            del _  # memory usage
 
-        model.eval()
-        output_unlabeled = model(weak_unlabeled_data)
-        _, pseudo_labels = torch.max(output_unlabeled, 1)
-        del _  # memory usage
+            if use_cuda:
+                weak_unlabeled_data = weak_unlabeled_data.cuda()
 
-        probs = F.softmax(output_unlabeled, dim=-1)
-        index = torch.where(probs > threshold)[0]  # Only use images that are likely to be in our 20 classes
+            model.eval()
+            output_unlabeled = model(weak_unlabeled_data)
+            _, pseudo_labels = torch.max(output_unlabeled, 1)
+            del _  # memory usage
 
-        pdb.set_trace()
-        if len(index):  # index.size()
-            n_sample += len(index)
-            weak_unlabeled_data = weak_unlabeled_data[index]
-            pseudo_labels = pseudo_labels[index]
+            probs = F.softmax(output_unlabeled, dim=-1)
+            index = torch.where(probs > threshold)[0]  # Only use images that are likely to be in our 20 classes
 
-            model.train()
-            if strong_augmentation:
-                pdb.set_trace()
+            pdb.set_trace()
+            if len(index):  # index.size()
+                n_sample += len(index)
+                weak_unlabeled_data = weak_unlabeled_data[index]
+                pseudo_labels = pseudo_labels[index]
 
-                strong_unlabeled_data = strong_unlabeled_data[index]
-                if use_cuda:
-                    strong_unlabeled_data = strong_unlabeled_data.cuda()
+                model.train()
+                if strong_augmentation:
+                    pdb.set_trace()
 
-                # Unlabeled loss with pseudo labels
-                output = model(strong_unlabeled_data)
+                    strong_unlabeled_data = strong_unlabeled_data[index]
+                    if use_cuda:
+                        strong_unlabeled_data = strong_unlabeled_data.cuda()
 
-            else:
-                output = model(weak_unlabeled_data)
+                    # Unlabeled loss with pseudo labels
+                    output = model(strong_unlabeled_data)
 
-            unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
-            unlabeled_loss.backward()
+                else:
+                    output = model(weak_unlabeled_data)
 
-            train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
+                unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
+                unlabeled_loss.backward()
 
-            if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
-                optimizer.step()
-                optimizer.zero_grad()
-            if batch_idx % log_interval == 0:
-                logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
-                    epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
-                    100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
-                logger.info('Unlabeled examples trained on : {}'.format(n_sample))
+                train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
 
-            del weak_unlabeled_data, strong_unlabeled_data, pseudo_labels, output_unlabeled, probs
+                if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+                if batch_idx % log_interval == 0:
+                    logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
+                        epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
+                        100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
+                    print('Unlabeled examples trained on : {}'.format(n_sample))
+
+                del output, output_unlabeled, probs, pseudo_labels
+
+            del weak_unlabeled_data, strong_unlabeled_data
             # Free space from GPU memory
 
-        # For every n_split batches train one epoch on labeled data
-        if not (batch_idx + 1) % n_split:
-            print("Split reach - Start training 1 epoch on labeled data")
+        else:
 
             # Normal training procedure
-            for batch_idx, (data, target) in tqdm_notebook(enumerate(train_loader)):
+            (data, target) = next(iter(train_loader))
 
-                if use_cuda:
-                    data = data.cuda()
-                    target = target.cuda()
+            if use_cuda:
+                data = data.cuda()
+                target = target.cuda()
 
-                output = model(data)
+            output = model(data)
 
-                labeled_loss = criterion(output, target)
+            labeled_loss = criterion(output, target)
 
-                # Backpropagation
-                optimizer.zero_grad()
-                labeled_loss.backward()
-                optimizer.step()
+            # Backpropagation
+            optimizer.zero_grad()
+            labeled_loss.backward()
+            optimizer.step()
 
-                train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
+            train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
 
-                # Remove space from GPU memory
-                del data, target, output
+            # Remove space from GPU memory
+            del data, target, output
 
-            train_labeled_loss.append(np.mean(train_batch_labeled_loss))
-
-            stdout = logging('Labeled Train Epoch: {} \tLoss: {:.6f}'.format(epoch, train_labeled_loss[-1]), stdout)
-
-            break
 
         # if batch_idx % log_interval == 0:
         #    writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
@@ -141,7 +139,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
         #    writer.add_scalar('labeled_loss', labeled_loss.data.item(), n_iter)
 
     # pdb.set_trace()
+
     train_unlabeled_loss.append(np.mean(train_batch_unlabeled_loss))
+    train_labeled_loss.append(np.mean(train_batch_labeled_loss))
+    print('\n')
     stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(unlabeled_loader.dataset)), stdout)
     stdout = logging('Unlabeled Train loss Epoch {} : {}'.format(epoch, train_unlabeled_loss[-1]), stdout)
 
@@ -152,7 +153,7 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
          early_stopping, writer, stdout, accumulation_steps, threshold, n_split, strong_augmentation, T2, factor):
 
     train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
-    n_batches = len(train_loader.dataset) // batch_size
+    n_batches = (len(train_loader.dataset) + len(unlabeled_loader.dataset)) // batch_size
 
     for epoch in range(1, epochs + 1):
 
@@ -282,7 +283,7 @@ if __name__ == '__main__':
                              transform=data_transforms_dev),
         batch_size=args.batch_size, shuffle=False, num_workers=1)
 
-
+    pdb.set_trace()
     # Create folder results
     path_result = os.path.join(args.experiment, RUN_ID)
     if not os.path.isdir(path_result):
