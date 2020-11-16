@@ -64,7 +64,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     return model, train_loss, stdout
 
 
-def validation(model, epoch, val_loader, use_cuda, val_loss, stdout):
+def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer):
     model.eval()
     validation_loss = 0
     correct = 0
@@ -90,7 +90,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout):
     val_loss.append(validation_loss)
     writer.add_scalar('validation_loss', validation_loss, epoch)
 
-    return val_loss, score.data.item(), stdout
+    return val_loss, score.data.item(), stdout, writer
 
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler, early_stopping, writer,
@@ -104,7 +104,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         t0 = time.time()
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
                                           stdout, writer, n_batches, batch_size, accumulation_steps)
-        val_loss, accuracy, stdout = validation(model, epoch, val_loader, use_cuda, val_loss, stdout)
+        val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
         scheduler.step()
 

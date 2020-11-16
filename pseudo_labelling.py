@@ -87,10 +87,11 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
                 optimizer.step()
                 optimizer.zero_grad()
-
-            logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
-                        epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
-                        100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
+            if batch_idx % log_interval == 0:
+                logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
+                    epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
+                    100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
+                logger.info('Unlabeled examples trained on : {}'.format(n_sample))
 
             del weak_unlabeled_data, strong_unlabeled_data, pseudo_labels, output_unlabeled, probs
             # Free space from GPU memory
