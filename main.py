@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     # Training settings
     parser = argparse.ArgumentParser(description='RecVis A3 training script')
-    parser.add_argument('--data', type=str, default='bird_dataset', metavar='D',
+    parser.add_argument('--data', type=str, default='cropped_birds', metavar='D',
                         help="folder where data is located. train_images/ and val_images/ need to be found in the folder")
     parser.add_argument('--batch_size', type=int, default=64, metavar='B',
                         help='input batch size for training (default: 64)')
