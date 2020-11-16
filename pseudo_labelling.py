@@ -227,7 +227,7 @@ if __name__ == '__main__':
                                                                      ' considered')
     parser.add_argument('--RUN_ID', type=str, required=True, help="RUN_ID of the pre trained model")
     parser.add_argument('--strong_augmentation', type=int, default=1, help="perform strong augmentation or not")
-    parser.add_argument('--T2', type=int, default=100, help="T2 value")
+    parser.add_argument('--T2', type=int, default=5, help="T2 value")
     parser.add_argument('--factor', type=int, default=2, help="factor value")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
