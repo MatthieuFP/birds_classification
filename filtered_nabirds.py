@@ -51,7 +51,7 @@ for n in range(1, 14):
         output = model(data)
         out = F.softmax(output, dim=-1)
 
-        if torch.max(out, dim=-1)[0].item() > 0.99:
+        if torch.max(out, dim=-1)[0].item() > 0.98:
             saved += 1
             print('\n' + str(saved))
 
