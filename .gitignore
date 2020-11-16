@@ -2,3 +2,5 @@ bird_dataset
 cropped_birds
 experiment
 nabirds
+cropped_NAbirds
+filtered_cropped_NAbirds
