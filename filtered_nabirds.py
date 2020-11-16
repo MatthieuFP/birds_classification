@@ -24,7 +24,8 @@ path_load_model = os.path.join(path_id, 'model.pt')
 path_data = os.path.join(path, 'cropped_NAbirds')
 path_save = os.path.join(path, 'filtered_cropped_NAbirds')
 
-data_transforms = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],std=[0.229, 0.224, 0.225])])
+data_transforms = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(),
+                                      transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 model = load_model(path_load_model, 'vit', 'vit_large_patch16_224', use_cuda=True, load_weights=1)
 
 def pil_loader(path):
