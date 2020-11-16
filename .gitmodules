@@ -1,0 +1,9 @@
+[submodule "early_stopping"]
+	path = early_stopping
+	url = https://github.com/Bjarten/early-stopping-pytorch.git
+[submodule "detectron2"]
+	path = detectron2
+	url = https://github.com/facebookresearch/detectron2.git
+[submodule "SRGAN"]
+	path = SRGAN
+	url = https://github.com/dongheehand/SRGAN-PyTorch.git
