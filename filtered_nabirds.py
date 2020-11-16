@@ -38,7 +38,7 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-n = 9
+n = args.n
 model.eval()
 os.makedirs(path_save + '/subsample{}'.format(n), exist_ok=False)
 path_imgs = glob.glob(path_data + '/subsample{}/*.jpg'.format(n))
