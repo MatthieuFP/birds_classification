@@ -42,11 +42,13 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     model.train()
 
+    n_unlabeled = 0
+    n_labeled = 0
     for batch_idx in tqdm_notebook(range(n_batches)):
 
         p = random.random()
         if p < proba:  # 2 unlabeled examples for 1 labelled
-
+            n_unlabeled += 1
             (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
             del _  # memory usage
 
@@ -92,7 +94,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
                 if batch_idx % log_interval == 0:
                     logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
-                        epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
+                        epoch, n_unlabeled * batch_size, len(unlabeled_loader.dataset),
                         100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
                     print('Unlabeled examples trained on : {}'.format(n_sample))
 
@@ -102,7 +104,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             # Free space from GPU memory
 
         else:
-
+            n_labeled += 1
             # Normal training procedure
             (data, target) = next(iter(train_loader))
 
@@ -120,6 +122,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             optimizer.step()
 
             train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
+            if batch_idx % log_interval == 0:
+                logger.info('Labeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
+                    epoch, n_labeled * batch_size, len(train_loader.dataset),
+                           100. * batch_idx / len(train_loader), labeled_loss.data.item() / batch_size))
 
             # Remove space from GPU memory
             del data, target, output
@@ -211,7 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay ADAM optimizer')
     parser.add_argument('--seed', type=int, default=42, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+    parser.add_argument('--log-interval', type=int, default=40, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--experiment', type=str, default='semi_supervized_experiment', metavar='E',
                         help='folder where experiment outputs are located.')
