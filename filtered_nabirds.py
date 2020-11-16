@@ -18,11 +18,15 @@ from torch.utils.tensorboard import SummaryWriter
 import pdb
 from uuid import uuid4
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--proba', type=float, required=True)
+args = parser.parse_args()
+
 path = os.getcwd()
 path_id = os.path.join("experiment", '31d84')
 path_load_model = os.path.join(path_id, 'model.pt')
 path_data = os.path.join(path, 'cropped_NAbirds')
-path_save = os.path.join(path, 'confident_filtered_cropped_NAbirds')
+path_save = os.path.join(path, 'confident{}_filtered_cropped_NAbirds'.format(str(args.proba).split(r'.')[-1]))
 
 data_transforms = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor(),
                                       transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
@@ -51,7 +55,7 @@ for n in range(1, 14):
         output = model(data)
         out = F.softmax(output, dim=-1)
 
-        if torch.max(out, dim=-1)[0].item() > 0.98:
+        if torch.max(out, dim=-1)[0].item() > args.proba:
             saved += 1
             print('\n' + str(saved))
 
