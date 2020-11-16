@@ -13,6 +13,7 @@ import os
 import time
 from utils.utils import *
 from utils.randaugment import RandAugmentMC
+from utils.augmented_dataset import TransformFixMatch
 import numpy as np
 import torch
 import torch.nn as nn
@@ -40,15 +41,18 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     optimizer.zero_grad()
 
     model.train()
-    for batch_idx, (unlabeled_data, _) in tqdm_notebook(enumerate(unlabeled_loader)):
+
+    for batch_idx, ((weak_unlabeled_data, strong_unlabeled_data), _) in tqdm_notebook(enumerate(unlabeled_loader)):
         del _  # memory usage
 
         n_iter = batch_idx + (epoch - 1) * n_batches
+
+        pdb.set_trace()
         if use_cuda:
-            unlabeled_data = unlabeled_data.cuda()
+            weak_unlabeled_data = weak_unlabeled_data.cuda()
 
         model.eval()
-        output_unlabeled = model(unlabeled_data)
+        output_unlabeled = model(weak_unlabeled_data)
         _, pseudo_labels = torch.max(output_unlabeled, 1)
         del _  # memory usage
 
@@ -58,19 +62,22 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
         pdb.set_trace()
         if len(index):  # index.size()
             n_sample += len(index)
-            unlabeled_data = unlabeled_data[index]
+            weak_unlabeled_data = weak_unlabeled_data[index]
             pseudo_labels = pseudo_labels[index]
 
             model.train()
             if strong_augmentation:
-                strong_transform = transforms.Compose([transforms.RandomHorizontalFlip(),
-                                                       RandAugmentMC(n=2, m=10),
-                                                       transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                            std=[0.229, 0.224, 0.225])])
-                unlabeled_data = strong_transform(unlabeled_data)
+                pdb.set_trace()
 
-            # Unlabeled loss with pseudo labels
-            output = model(unlabeled_data)
+                strong_unlabeled_data = strong_unlabeled_data[index]
+                if use_cuda:
+                    strong_unlabeled_data = strong_unlabeled_data.cuda()
+
+                # Unlabeled loss with pseudo labels
+                output = model(strong_unlabeled_data)
+
+            else:
+                output = model(weak_unlabeled_data)
 
             unlabeled_loss = alpha(epoch, T2=10, factor=2) * criterion(output, pseudo_labels)
             unlabeled_loss.backward()
@@ -85,7 +92,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                         epoch, batch_idx * batch_size, len(unlabeled_loader.dataset),
                         100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
 
-            del unlabeled_data, pseudo_labels, output_unlabeled, probs  # Free space from GPU memory
+            del weak_unlabeled_data, strong_unlabeled_data, pseudo_labels, output_unlabeled, probs
+            # Free space from GPU memory
 
         # For every n_split batches train one epoch on labeled data
         if not (batch_idx + 1) % n_split:
@@ -261,7 +269,7 @@ if __name__ == '__main__':
                              transform=data_transforms_train),
         batch_size=args.batch_size, shuffle=True, num_workers=1)
 
-    unlabeled_loader = load_nabirds(args.batch_size, data_transforms_train)
+    unlabeled_loader = load_nabirds(args.batch_size, TransformFixMatch())
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(args.data + '/val_images',
