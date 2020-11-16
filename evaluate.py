@@ -13,7 +13,8 @@ parser.add_argument('--data', type=str, default='bird_dataset', metavar='D',
                     help="folder where data is located. test_images/ need to be found in the folder")
 parser.add_argument('--model', type=str, metavar='M',
                     help="model architecture, e.g. resnet"),
-parser.add_argument('--cfg', type=str, default='vit_large_patch32_384'),
+parser.add_argument('--cfg', type=str, default='vit_large_patch16_224'),
+parser.add_argument('--experiment', type=str, default='semi_supervized_experiment')
 parser.add_argument('--RUN_ID', type=str, help='id of the model', required=True),
 parser.add_argument('--size', type=int, default=224, help='size of the images'),
 parser.add_argument('--outfile', type=str, default='experiment/kaggle.csv', metavar='D',
@@ -23,7 +24,7 @@ args = parser.parse_args()
 use_cuda = torch.cuda.is_available()
 
 path = os.getcwd()
-path_experiments = os.path.join(path, 'experiment')
+path_experiments = os.path.join(path, args.experiment)
 path_id = os.path.join(path_experiments, args.RUN_ID)
 path_model = os.path.join(path_id, 'model.pt')
 path_output = os.path.join(path_id, 'submission.csv')
