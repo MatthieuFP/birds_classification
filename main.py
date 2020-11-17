@@ -180,6 +180,7 @@ if __name__ == '__main__':
     # Load model
     model = load_model(path_model=None,
                        model_type=args.model,
+                       dropout=args.dropout,
                        cfg=args.cfg,
                        use_cuda=use_cuda,
                        load_weights=0)
