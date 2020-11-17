@@ -123,7 +123,7 @@ class backbone_ViT(nn.Module):
         super(backbone_ViT, self).__init__()
 
         self.ViT = load_model(path_model='/experiment/31d84/model.pt', model_type='vit', dropout=drop,
-                              cfg='vit_large_patch16_224', use_cuda=False, load_weights=1)
+                              cfg='vit_large_patch16_224', use_cuda=True, load_weights=1)
         self.backbone = self.ViT.vit
 
     def forward(self, x):
