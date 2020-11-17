@@ -217,7 +217,7 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay ADAM optimizer')
     parser.add_argument('--seed', type=int, default=42, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--log-interval', type=int, default=40, metavar='N',
+    parser.add_argument('--log_interval', type=int, default=40, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--experiment', type=str, default='semi_supervized_experiment', metavar='E',
                         help='folder where experiment outputs are located.')
