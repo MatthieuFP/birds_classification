@@ -66,7 +66,7 @@ def train(train_loader, model, criterion, optimizer_conv, scheduler_conv, optimi
         optimizer_fc.zero_grad()
         loss.backward()
 
-        if epoch >= 8:
+        if epoch >= 5:
             optimizer_conv.step()
         optimizer_fc.step()
         scheduler_conv.step()
