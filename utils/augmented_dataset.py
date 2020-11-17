@@ -7,7 +7,7 @@ from .randaugment import RandAugmentMC
 class TransformFixMatch(object):
     def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
         self.weak = transforms.Compose([
-            transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(0.5),
             transforms.RandomVerticalFlip(0.5),
             transforms.Resize((224, 224))])
 
@@ -15,12 +15,12 @@ class TransformFixMatch(object):
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomVerticalFlip(0.5),
             transforms.Resize((224, 224)),
-            RandAugmentMC(n=2, m=10),
-            transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
+            RandAugmentMC(n=2, m=10)])
 
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std)])
+            transforms.Normalize(mean=mean, std=std),
+            transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
 
     def __call__(self, x):
         weak = self.weak(x)
