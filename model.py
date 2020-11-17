@@ -84,3 +84,7 @@ class SSL_ViT(nn.Module):
     def init_noiseclass(self):
         self._classifier.weight[:20] = torch.eye(20)
 
+    def forward(self, x):
+        x = self.base(x)
+        return self._classifier(x)
+

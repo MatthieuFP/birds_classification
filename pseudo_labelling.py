@@ -17,7 +17,7 @@ from utils.augmented_dataset import TransformFixMatch
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.functional as F
+import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets
 from tqdm import tqdm, tqdm_notebook
@@ -31,24 +31,27 @@ from uuid import uuid4
 
 def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log_interval, train_unlabeled_loss,
                      train_labeled_loss, stdout, writer, optimizer, n_batches, batch_size, accumulation_steps,
-                     threshold, n_split, strong_augmentation, T2, factor, proba):
+                     threshold, negative_threshold, strong_augmentation, T2, factor, proba, device,
+                     train_negative_noise_loss):
 
     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
     train_batch_unlabeled_loss = []
     train_batch_labeled_loss = []
+    train_batch_negative_loss = []
     n_sample = 0
+    n_noise = 0
+    n_labeled = 0
 
     optimizer.zero_grad()
 
     model.train()
 
-    n_unlabeled = 0
-    n_labeled = 0
+
     for batch_idx in tqdm_notebook(range(n_batches)):
 
         p = random.random()
-        if p < proba:  # 2 unlabeled examples for 1 labelled
-            n_unlabeled += 1
+        if p < proba:  # 2 unlabeled examples for 1 labelled for instance
+
             pdb.set_trace()
             (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
             del _  # memory usage
@@ -62,9 +65,23 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             del _  # memory usage
 
             probs = F.softmax(output_unlabeled, dim=-1)
-            index = torch.where(probs > threshold)[0]  # Only use images that are likely to be in our 20 classes
-            
+            index = torch.where(probs[:, :20] > threshold)[0]  # Only use images that are likely to be in our 20 classes
+            noise_index = torch.where(probs[:, :20] < negative_threshold)[0]
+
+            if len(noise_index):
+                n_noise += len(noise_index)
+                noise_labels = torch.Tensor(20 * len(noise_index), device=device)
+                noise_sample = output_unlabeled[noise_index]
+
+                model.train()
+                output = model(noise_sample)
+
+                negative_noise_loss = 1e-1 * criterion(output, noise_labels)
+                negative_noise_loss.backward()
+                train_batch_negative_loss.append(negative_noise_loss.item() / len(noise_index))
+
             pdb.set_trace()
+            
             if len(index):  # index.size()
                 n_sample += len(index)
                 weak_unlabeled_data = weak_unlabeled_data[index]
@@ -89,17 +106,11 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
                 train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
 
-                if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
-                    optimizer.step()
-                    optimizer.zero_grad()
-
-                if batch_idx % log_interval == 0:
-                    logger.info('Unlabeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
-                        epoch, n_unlabeled * batch_size, len(unlabeled_loader.dataset),
-                        100. * batch_idx / len(unlabeled_loader), unlabeled_loss.data.item() / len(index)))
-                    print('Unlabeled examples trained on : {}'.format(n_sample))
-
                 del output, output_unlabeled, probs, pseudo_labels
+
+            if not (batch_idx + 1) % accumulation_steps:  # Gradient accumulation to handle limit of GPU RAM
+                optimizer.step()
+                optimizer.zero_grad()
 
             del weak_unlabeled_data, strong_unlabeled_data
             # Free space from GPU memory
@@ -123,10 +134,6 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             optimizer.step()
 
             train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
-            if batch_idx % log_interval == 0:
-                logger.info('Labeled Train Epoch: {} [{}/{} ({:.0f}%)]\t Average Loss: {:.6f}'.format(
-                    epoch, n_labeled * batch_size, len(train_loader.dataset),
-                           100. * batch_idx / len(train_loader), labeled_loss.data.item() / batch_size))
 
             # Remove space from GPU memory
             del data, target, output
@@ -147,20 +154,23 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     # pdb.set_trace()
 
+    train_negative_noise_loss.append(np.mean(train_batch_negative_loss))
     train_unlabeled_loss.append(np.mean(train_batch_unlabeled_loss))
     train_labeled_loss.append(np.mean(train_batch_labeled_loss))
     print('\n')
     stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(unlabeled_loader.dataset)), stdout)
     stdout = logging('Unlabeled Train loss Epoch {} : {}'.format(epoch, train_unlabeled_loss[-1]), stdout)
 
-    return model, train_unlabeled_loss, train_labeled_loss, stdout
+    return model, train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, stdout
 
 
 def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, threshold, n_split, strong_augmentation, T2, factor,
-         proba):
+         early_stopping, writer, stdout, accumulation_steps, threshold, negative_threshold, strong_augmentation, T2,
+         factor, proba, device):
 
-    train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
+    train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, \
+    val_loss, val_accuracy, epoch_time = [], [], [], [], [], []
+
     n_batches = (len(train_loader.dataset) + len(unlabeled_loader.dataset)) // batch_size
 
     for epoch in range(1, epochs + 1):
@@ -168,14 +178,13 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
 
-        model, train_unlabeled_loss, train_labeled_loss, stdout = pseudo_labelling(model, epoch, train_loader,
-                                                                                   unlabeled_loader, use_cuda,
-                                                                                   log_interval, train_unlabeled_loss,
-                                                                                   train_labeled_loss, stdout,
-                                                                                   writer, optimizer, n_batches,
-                                                                                   batch_size, accumulation_steps,
-                                                                                   threshold, n_split, strong_augmentation,
-                                                                                   T2, factor, proba)
+        model, train_unlabeled_loss, train_labeled_loss, \
+        train_negative_noise_loss, stdout = pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda,
+                                                             log_interval, train_unlabeled_loss, train_labeled_loss,
+                                                             stdout, writer, optimizer, n_batches, batch_size,
+                                                             accumulation_steps,threshold, negative_threshold,
+                                                             strong_augmentation, T2, factor, proba, device,
+                                                             train_negative_noise_loss)
 
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
@@ -198,7 +207,8 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
     stdout = logging("Average time per epoch : {}".format(np.mean(epoch_time)), stdout)
     stdout.append(' ')
 
-    return model, train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time, stdout
+    return model, train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, val_loss, val_accuracy, \
+           epoch_time, stdout
 
 
 if __name__ == '__main__':
@@ -222,7 +232,7 @@ if __name__ == '__main__':
                         help='how many batches to wait before logging training status')
     parser.add_argument('--experiment', type=str, default='semi_supervized_experiment', metavar='E',
                         help='folder where experiment outputs are located.')
-    parser.add_argument('--model', type=str, default='resnet101', help='model to run')
+    parser.add_argument('--model', type=str, default='vit', help='model to run')
     parser.add_argument('--dropout', type=float, default=0.2, help='dropout probability')
     parser.add_argument('--patience', type=int, default=5, help="Early stopping patience")
     parser.add_argument('--debug', type=int, default=0, help="debug")
@@ -233,9 +243,9 @@ if __name__ == '__main__':
     parser.add_argument('--erasing', type=int, default=1, help="perform random erasing or not")
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM")
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
-    parser.add_argument('--n_split', type=int, default=3000, help='number of unlabeled batch before train labeled batch')
     parser.add_argument('--threshold', type=float, default=0.8, help='if max(prob) < threshold, unlabeled example is not'
                                                                      ' considered')
+    parser.add_argument('--negative_threshold', type=float, default=0.5, help="negative / 'noise' / 'nothing' class")
     parser.add_argument('--RUN_ID', type=str, required=True, help="RUN_ID of the pre trained model")
     parser.add_argument('--strong_augmentation', type=int, default=1, help="perform strong augmentation or not")
     parser.add_argument('--T2', type=int, default=5, help="T2 value")
@@ -332,12 +342,14 @@ if __name__ == '__main__':
     # Summary Writer - Tensorboard
     path_report = os.path.join(path_result, 'report')
     writer = SummaryWriter(log_dir=path_report)
-    model, train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time, stdout = \
-        main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
-             args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps, args.threshold,
-             args.n_split, args.strong_augmentation, args.T2, args.factor, args.proba)
+    model, train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, val_loss, val_accuracy, \
+    epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
+                              args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
+                              args.threshold, args.negative_threshold, args.strong_augmentation, args.T2, args.factor,
+                              args.proba)
 
     pdb.set_trace()
+    results['train_negative_noise_loss'] = train_negative_noise_loss
     results['train_unlabeled_loss'] = train_unlabeled_loss
     results['train_labeled_loss'] = train_labeled_loss
     results['val_loss'] = val_loss
