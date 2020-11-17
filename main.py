@@ -154,7 +154,7 @@ if __name__ == '__main__':
     parser.add_argument('--dropout', type=float, default=0.2, help='dropout probability'),
     parser.add_argument('--patience', type=int, default=5, help="Early stopping patience"),
     parser.add_argument('--debug', type=int, default=0, help="debug"),
-    parser.add_argument('--cfg', type=str, default='vit_large_patch32_384', help='Config ViT model'),
+    parser.add_argument('--cfg', type=str, default='vit_large_patch16_224', help='Config ViT model'),
     parser.add_argument('--horizontal_flip', type=int, default=1, help="perform hor. flip data augmentation"),
     parser.add_argument('--vertical_flip', type=int, default=1, help="perform vert. flip data augmentation"),
     parser.add_argument('--random_rotation', type=int, default=1, help="perform random rotation from -45° to 45°"),

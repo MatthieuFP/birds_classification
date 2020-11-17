@@ -32,6 +32,7 @@ data_transforms = transforms.Compose([transforms.Resize((224, 224)), transforms.
                                       transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])])
 model = load_model(path_load_model, 'vit', 'vit_large_patch16_224', use_cuda=True, load_weights=1)
 
+
 def pil_loader(path):
     # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
     with open(path, 'rb') as f:

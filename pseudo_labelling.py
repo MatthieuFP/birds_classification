@@ -62,7 +62,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
             probs = F.softmax(output_unlabeled, dim=-1)
             index = torch.where(probs > threshold)[0]  # Only use images that are likely to be in our 20 classes
-
+            noise_index = torch.where(probs < threshold)[0]
+            
             pdb.set_trace()
             if len(index):  # index.size()
                 n_sample += len(index)
@@ -239,7 +240,8 @@ if __name__ == '__main__':
     parser.add_argument('--strong_augmentation', type=int, default=1, help="perform strong augmentation or not")
     parser.add_argument('--T2', type=int, default=5, help="T2 value")
     parser.add_argument('--factor', type=int, default=2, help="factor value")
-    parser.add_argument('--proba', type=float, default=2/3)
+    parser.add_argument('--proba', type=float, default=0.66)
+    parser.add_argument('--noise_class', type=int, default=0)
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -266,6 +268,7 @@ if __name__ == '__main__':
     # Load model
     model = load_model(path_model=path_load_model,
                        model_type=args.model,
+                       dropout=args.dropout,
                        cfg=args.cfg,
                        use_cuda=use_cuda,
                        load_weights=1)

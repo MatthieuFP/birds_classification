@@ -1,5 +1,7 @@
 from logger import logger
 from model import *
+import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
 from torchvision import datasets
@@ -12,25 +14,27 @@ def logging(message, stdout):
     return stdout
 
 
-def load_model(path_model, model_type, cfg, use_cuda, load_weights=1):
+def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
     # Load model
+    device = torch.device('cuda' if use_cuda else 'cpu')
     if model_type == 'resnet101':
-        model = ResNet_Net(drop=0.0)  # model.eval anyway
+        model = ResNet_Net(drop=dropout)
     elif model_type == 'vit':
-        model = ViT(cfg=cfg, drop=0.0, pretrained=bool(1 - load_weights))  # model.eval anyway
+        model = ViT(cfg=cfg, drop=dropout, pretrained=bool(1 - load_weights))
+    elif model_type == 'ssl-vit':
+        vit_model = ViT(cfg=cfg, drop=dropout, pretrained=0)
+        state_dict = torch.load(path_model, map_location=device)
+        vit_model.load_state_dict(state_dict)
+        model = SSL_ViT(model=vit_model)
+        model.eval()
     elif model_type == 'default':
         model = Net()
     else:
         raise NameError('model not found')
     logger.info("{} model loaded".format(model_type))
 
-    if load_weights and use_cuda:
-        state_dict = torch.load(path_model)
-        model.load_state_dict(state_dict)
-        model.eval()
-
-    elif load_weights and not use_cuda:
-        state_dict = torch.load(path_model, map_location=torch.device('cpu'))
+    if load_weights and use_cuda and model_type != 'ssl-vit':
+        state_dict = torch.load(path_model, map_location=device)
         model.load_state_dict(state_dict)
         model.eval()
 
@@ -89,3 +93,15 @@ def load_nabirds(batch_size, data_transforms):
                                                               num_workers=1)
     return loader
 
+
+def imshow(inp, title=None):
+    """Imshow for Tensor. From pytorch.org"""
+    inp = inp.numpy().transpose((1, 2, 0))
+    mean = np.array([0.485, 0.456, 0.406])
+    std = np.array([0.229, 0.224, 0.225])
+    inp = std * inp + mean
+    inp = np.clip(inp, 0, 1)
+    plt.imshow(inp)
+    if title is not None:
+        plt.title(title)
+    plt.pause(0.001)
