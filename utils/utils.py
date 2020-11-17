@@ -47,7 +47,7 @@ def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
     return model
 
 
-def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=1, erasing=0, model='vit', train=1, size=224):
+def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, erasing=0, model='vit', train=1, size=224):
     data_transforms = []
     if horizontal_flip and train:
         data_transforms.append(transforms.RandomHorizontalFlip(p=0.5))
@@ -66,7 +66,7 @@ def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=1, e
     data_transforms += [transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                     std=[0.229, 0.224, 0.225])]
     if erasing and train:
-        data_transforms.append(transforms.RandomErasing(p=0.5, scale=(0.05, 0.15)))
+        data_transforms.append(transforms.RandomErasing(p=0.5, scale=(0.01, 0.01), ratio=(1., 1.)))
 
     return transforms.Compose(data_transforms)
 
