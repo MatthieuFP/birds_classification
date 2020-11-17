@@ -39,13 +39,13 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
 
         # optimizer.step()
         if batch_idx % log_interval == 0:
-            writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
-            writer.add_histogram('grad_classifier', model.classifier.weight.grad, n_iter)  # Check classifier gradient
-            try:
-                writer.add_histogram('linear_layer', model.linear.weight, n_iter)  # Check linear layer weights
-                writer.add_histogram('grad_linear', model.linear.weight.grad, n_iter)  # Check linear layer gradient
-            except:
-                continue
+          #  writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
+          #  writer.add_histogram('grad_classifier', model.classifier.weight.grad, n_iter)  # Check classifier gradient
+          #  try:
+          #      writer.add_histogram('linear_layer', model.linear.weight, n_iter)  # Check linear layer weights
+          #      writer.add_histogram('grad_linear', model.linear.weight.grad, n_iter)  # Check linear layer gradient
+          #  except:
+          #      continue
 
             logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
