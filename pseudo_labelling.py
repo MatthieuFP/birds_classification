@@ -62,7 +62,6 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
             probs = F.softmax(output_unlabeled, dim=-1)
             index = torch.where(probs > threshold)[0]  # Only use images that are likely to be in our 20 classes
-            noise_index = torch.where(probs < threshold)[0]
             
             pdb.set_trace()
             if len(index):  # index.size()

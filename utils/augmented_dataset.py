@@ -1,8 +1,7 @@
-# code from https://github.com/kekmodel/FixMatch-pytorch/blob/master/dataset/cifar.py
+# code partially from https://github.com/kekmodel/FixMatch-pytorch/blob/master/dataset/cifar.py
 from torchvision import transforms
 
 from .randaugment import RandAugmentMC
-
 
 
 class TransformFixMatch(object):
@@ -16,7 +15,8 @@ class TransformFixMatch(object):
             transforms.RandomHorizontalFlip(0.5),
             transforms.RandomVerticalFlip(0.5),
             transforms.Resize((224, 224)),
-            RandAugmentMC(n=2, m=10)])
+            RandAugmentMC(n=2, m=10),
+            transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
 
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
