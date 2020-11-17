@@ -44,7 +44,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     n_unlabeled = 0
     n_labeled = 0
-    for batch_idx in tqdm(range(n_batches)):
+    for batch_idx in tqdm_notebook(range(n_batches)):
 
         p = random.random()
         if p < proba:  # 2 unlabeled examples for 1 labelled
