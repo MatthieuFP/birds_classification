@@ -4,6 +4,9 @@ from torch import nn
 import torchvision
 from torchvision import models
 import numpy as np
+from model import ViT
+from utils.utils import *
+import timm
 import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -15,23 +18,24 @@ def pdist(vectors):
     return distance_matrix
 
 class API_Net(nn.Module):
-    def __init__(self):
+    def __init__(self, drop):
         super(API_Net, self).__init__()
 
-        densenet161 = models.densenet161(pretrained=True)
-        layers = list(densenet161.children())[:-1]
+        #densenet161 = models.densenet161(pretrained=True)
+        #layers = list(densenet161.children())[:-1]
 
-        self.conv = nn.Sequential(*layers)
-        self.avg = nn.AvgPool2d(kernel_size=7, stride=1)
-        self.map1 = nn.Linear(2208 * 2, 512)
-        self.map2 = nn.Linear(512, 2208)
-        self.fc = nn.Linear(2208, 20)
-        self.drop = nn.Dropout(p=0.5)
+        self.conv = backbone_ViT(drop=drop)
+        self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
+        self.map1 = nn.Linear(1024 * 2, 256)
+        self.map2 = nn.Linear(256, 1024)
+        self.fc = nn.Linear(1024, 20)
+        self.drop = nn.Dropout(p=0.25)
         self.sigmoid = nn.Sigmoid()
 
 
     def forward(self, images, targets=None, flag='train'):
         conv_out = self.conv(images)
+        conv_out = conv_out.permute(0, 2, 1).view(-1, 1024, 14, 14)
         pool_out = self.avg(conv_out).squeeze()
 
         if flag == 'train':
@@ -111,3 +115,29 @@ class API_Net(nn.Module):
         inter_pairs = torch.from_numpy(inter_pairs).long().to(device)
 
         return intra_pairs, inter_pairs, intra_labels, inter_labels
+
+
+
+class backbone_ViT(nn.Module):
+    def __init__(self, drop=0.2):
+        super(backbone_ViT, self).__init__()
+
+        self.ViT = load_model(path_model='/experiment/31d84/model.pt', model_type='vit', dropout=drop,
+                              cfg='vit_large_patch16_224', use_cuda=False, load_weights=1)
+        self.backbone = self.ViT.vit
+
+    def forward(self, x):
+        B = x.shape[0]
+        x = self.backbone.patch_embed(x)
+
+        cls_tokens = self.backbone.cls_token.expand(B, -1, -1)
+        x = torch.cat((cls_tokens, x), dim=1)
+        x = x + self.backbone.pos_embed
+        x = self.backbone.pos_drop(x)
+
+        for blk in self.backbone.blocks:
+            x = blk(x)
+
+        # x = self.backbone.norm(x)
+        return x[:, 1:, :]
+

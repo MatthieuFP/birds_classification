@@ -52,27 +52,25 @@ class ResNet_Net(nn.Module):
 class ViT(nn.Module):
     def __init__(self, cfg, drop, pretrained=True):
         super(ViT, self).__init__()
-        self.vit = timm.create_model(cfg, pretrained=pretrained, num_classes=20, drop_rate=drop)
+        self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=drop)
         # self.dropout = nn.Dropout(drop)
         # self.leaky_relu = nn.LeakyReLU()
         # self.linear = nn.Linear(1000, 128)
         # self.classifier = nn.Linear(128, 20)
-        # self.classifier = nn.Linear(1000, 20)
+        self.classifier = nn.Linear(1000, 20)
 
         # self.init_weights(self.linear)
-        # self.init_weights(self.classifier)
+        self.init_weights(self.classifier)
 
     def init_weights(self, layer):
         if type(layer) == nn.Linear:
             torch.nn.init.xavier_uniform_(layer.weight)
 
     def forward(self, x):
-        output = self.vit(x)
+        x = self.vit(x)
         # x = self.leaky_relu(x)
         # x = self.linear(x)
-        # output = self.classifier(self.dropout(x))
-        # if self.noise_class:
-        #    output = self._classifier(self.dropout(x))
+        output = self.classifier(self.dropout(x))
         return output
 
 

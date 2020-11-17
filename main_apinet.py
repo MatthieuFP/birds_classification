@@ -66,7 +66,7 @@ def train(train_loader, model, criterion, optimizer_conv, scheduler_conv, optimi
         optimizer_fc.zero_grad()
         loss.backward()
 
-        if epoch >= 5:
+        if epoch >= 8:
             optimizer_conv.step()
         optimizer_fc.step()
         scheduler_conv.step()
@@ -169,6 +169,7 @@ if __name__ == '__main__':
                         help='how many batches to wait before logging training status')
     parser.add_argument('--experiment', type=str, default='experiment', metavar='E',
                         help='folder where experiment outputs are located.')
+    parser.add_argument('--dropout', type=float, default=0.2)
     parser.add_argument('--patience', type=int, default=5, help="Early stopping patience")
     parser.add_argument('--debug', type=int, default=0, help="debug")
     parser.add_argument('--horizontal_flip', type=int, default=1, help="perform hor. flip data augmentation")
@@ -194,14 +195,13 @@ if __name__ == '__main__':
         os.makedirs(args.experiment)
 
     # Load model
-    model = API_Net()
+    model = API_Net(drop=args.dropout)
     model = model.to(device)
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer_conv = torch.optim.SGD(model.conv.parameters(), args.lr,
-                                     momentum=args.momentum,
-                                     weight_decay=args.weight_decay)
+    optimizer_conv = torch.optim.Adam(model.conv.parameters(), args.lr,
+                                      weight_decay=args.weight_decay)
 
     fc_parameters = [value for name, value in model.named_parameters() if 'conv' not in name]
     optimizer_fc = torch.optim.SGD(fc_parameters, args.lr,
@@ -213,9 +213,9 @@ if __name__ == '__main__':
                                                 random_rotation=args.random_rotation,
                                                 erasing=args.erasing,
                                                 model='api_net',
-                                                size=448,
+                                                size=224,
                                                 train=1)
-    data_transforms_dev = data_transformation(model='api_net', size=448, train=0)
+    data_transforms_dev = data_transformation(model='api_net', size=224, train=0)
 
     train_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(args.data + '/train_images',
