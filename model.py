@@ -52,7 +52,7 @@ class ResNet_Net(nn.Module):
 class ViT(nn.Module):
     def __init__(self, cfg, drop, pretrained=True):
         super(ViT, self).__init__()
-        self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=drop)
+        self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.0)
         self.dropout = nn.Dropout(drop)
         # self.leaky_relu = nn.LeakyReLU()
         # self.linear = nn.Linear(1000, 128)
