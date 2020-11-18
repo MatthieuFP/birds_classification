@@ -4,6 +4,7 @@ import os
 import numpy as np
 import PIL.Image as Image
 import pdb
+import torch.nn.functional as F
 
 from model import *
 from utils.utils import *
@@ -71,7 +72,7 @@ for f in tqdm(test_images):
     if use_cuda:
         data = data.cuda()
     output = model(data)
-    max_probs.append(torch.min(output.max(dim=-1).values).data.item())
+    max_probs.append(torch.min(F.softmax(output, dim=-1).max(dim=-1).values).data.item())
     pred = output.data.max(1, keepdim=True)[1]
 
     if '_' in f:
