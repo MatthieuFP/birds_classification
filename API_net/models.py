@@ -34,9 +34,9 @@ class API_Net(nn.Module):
 
 
     def forward(self, images, targets=None, flag='train'):
-        conv_out = self.conv(images)
-        conv_out = conv_out.permute(0, 2, 1).view(-1, 1024, 14, 14)
-        pool_out = self.avg(conv_out).squeeze()
+        pool_out = self.conv(images)
+        # conv_out = conv_out.permute(0, 2, 1).view(-1, 1024, 14, 14)
+        # pool_out = self.avg(conv_out).squeeze()
 
         if flag == 'train':
             intra_pairs, inter_pairs, \
