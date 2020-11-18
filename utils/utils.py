@@ -87,10 +87,11 @@ def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, e
     data_transforms = []
 
     if model == 'vit':
-        data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
+        data_transforms.append(transforms.Resize((224, 224)))
+        # data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
     elif model == 'resnet':
         data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
-    elif model =='api_net':
+    elif model == 'api_net':
         data_transforms += [transforms.Resize((224, 224))]
 
     if horizontal_flip and train:
