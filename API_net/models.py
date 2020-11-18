@@ -24,11 +24,11 @@ class API_Net(nn.Module):
         densenet161 = models.densenet161(pretrained=True)
         layers = list(densenet161.children())[:-1]
 
-        self.conv = backbone_ViT(drop=drop)
-        self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
-        self.map1 = nn.Linear(1000 * 2, 256)
-        self.map2 = nn.Linear(256, 1000)
-        self.fc = nn.Linear(1000, 20)
+        self.conv = nn.Sequential(*layers)
+        self.avg = nn.AvgPool2d(kernel_size=7, stride=1)
+        self.map1 = nn.Linear(2208 * 2, 512)
+        self.map2 = nn.Linear(512, 1028)
+        self.fc = nn.Linear(1028, 20)
         self.drop = nn.Dropout(p=0.25)
         self.sigmoid = nn.Sigmoid()
 
