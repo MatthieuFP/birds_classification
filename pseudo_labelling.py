@@ -48,9 +48,14 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     for batch_idx in tqdm(range(n_batches)):  # tqdm_notebook
 
+        if not (batch_idx + 1) % log_interval:
+            print('{} batch : {} noise examples - {} unlabeled positive examples'.format(batch_idx + 1, n_noise,
+                                                                                         n_sample))
+
         p = random.random()
         if p < proba:  # 2 unlabeled examples for 1 labelled for instance
 
+            pdb.set_trace()
             (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
             del _  # memory usage
 
@@ -69,15 +74,18 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             if len(noise_index):
                 pdb.set_trace()
                 n_noise += len(noise_index)
-                noise_labels = torch.Tensor(20 * len(noise_index), device=device)
-                noise_sample = output_unlabeled[noise_index]
+                noise_labels = torch.Tensor([20] * len(noise_index), device=device).long()
+                noise_sample = weak_unlabeled_data[noise_index]
 
                 model.train()
                 output = model(noise_sample)
 
-                negative_noise_loss = 1e-1 * criterion(output, noise_labels)
+                negative_noise_loss = 5e-2 * criterion(output, noise_labels)
                 negative_noise_loss.backward()
                 train_batch_negative_loss.append(negative_noise_loss.item() / len(noise_index))
+
+                optimizer.step()
+                optimizer.zero_grad()
 
                 del noise_sample, noise_labels, output  # Free space
 
@@ -106,12 +114,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 unlabeled_loss.backward()
 
                 train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
-
-                del output, output_unlabeled, probs, pseudo_labels
-
-            if not (batch_idx + 1) % accumulation_steps:  # Gradient accumulation to handle limit of GPU RAM
                 optimizer.step()
                 optimizer.zero_grad()
+
+                del output, output_unlabeled, probs, pseudo_labels
 
             del weak_unlabeled_data, strong_unlabeled_data
             # Free space from GPU memory
@@ -167,12 +173,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
 def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
          early_stopping, writer, stdout, accumulation_steps, threshold, negative_threshold, strong_augmentation, T2,
-         factor, proba, device):
+         factor, proba, device, n_batches):
 
     train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, \
     val_loss, val_accuracy, epoch_time = [], [], [], [], [], []
-
-    n_batches = (len(train_loader.dataset) + len(unlabeled_loader.dataset)) // batch_size
 
     for epoch in range(1, epochs + 1):
 
@@ -229,19 +233,19 @@ if __name__ == '__main__':
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay ADAM optimizer')
     parser.add_argument('--seed', type=int, default=42, metavar='S',
                         help='random seed (default: 1)')
-    parser.add_argument('--log_interval', type=int, default=40, metavar='N',
+    parser.add_argument('--log_interval', type=int, default=200, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--experiment', type=str, default='semi_supervized_experiment', metavar='E',
                         help='folder where experiment outputs are located.')
-    parser.add_argument('--model', type=str, default='vit', help='model to run')
+    parser.add_argument('--model', type=str, default='ssl-vit', help='model to run')
     parser.add_argument('--dropout', type=float, default=0.2, help='dropout probability')
     parser.add_argument('--patience', type=int, default=5, help="Early stopping patience")
     parser.add_argument('--debug', type=int, default=0, help="debug")
     parser.add_argument('--cfg', type=str, default='vit_large_patch16_224', help='Config ViT model')
     parser.add_argument('--horizontal_flip', type=int, default=1, help="perform hor. flip data augmentation")
     parser.add_argument('--vertical_flip', type=int, default=1, help="perform vert. flip data augmentation")
-    parser.add_argument('--random_rotation', type=int, default=1, help="perform random rotation from -45° to 45°")
-    parser.add_argument('--erasing', type=int, default=1, help="perform random erasing or not")
+    parser.add_argument('--random_rotation', type=int, default=0, help="perform random rotation from -45° to 45°")
+    parser.add_argument('--erasing', type=int, default=0, help="perform random erasing or not")
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM")
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
     parser.add_argument('--threshold', type=float, default=0.8, help='if max(prob) < threshold, unlabeled example is not'
@@ -253,6 +257,7 @@ if __name__ == '__main__':
     parser.add_argument('--factor', type=int, default=2, help="factor value")
     parser.add_argument('--proba', type=float, default=0.66)
     parser.add_argument('--noise_class', type=int, default=0)
+    parser.add_argument('--n_batches', type=int, default=1000)
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -324,7 +329,8 @@ if __name__ == '__main__':
                    "erasing": args.erasing,
                    "pseudo_labelling": 1,
                    "strong_augmentation": args.strong_augmentation,
-                   "proba": args.proba}
+                   "proba": args.proba,
+                   "n_batches": args.n_batches}
         if args.model == 'vit':
             results['cfg'] = args.cfg
 
@@ -346,7 +352,7 @@ if __name__ == '__main__':
     epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
                               args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
                               args.threshold, args.negative_threshold, args.strong_augmentation, args.T2, args.factor,
-                              args.proba, device)
+                              args.proba, device, args.n_batches)
 
     results['train_negative_noise_loss'] = train_negative_noise_loss
     results['train_unlabeled_loss'] = train_unlabeled_loss
@@ -361,8 +367,3 @@ if __name__ == '__main__':
     stdout = logging("End of training - save stdout file", stdout)
     with open(os.path.join(path_result, 'stdout.txt'), 'w') as f:
         f.write('\n'.join(stdout))
-
-
-
-
-

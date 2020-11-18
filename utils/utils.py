@@ -86,20 +86,20 @@ class NewPad(object):
 def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, erasing=0, model='vit', train=1, size=224):
     data_transforms = []
 
-    if model == 'vit':
-        data_transforms.append(transforms.Resize((224, 224)))
-        # data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
-    elif model == 'resnet':
-        data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
-    elif model == 'api_net':
-        data_transforms += [transforms.Resize((224, 224))]
-
     if horizontal_flip and train:
         data_transforms.append(transforms.RandomHorizontalFlip(p=0.5))
     if vertical_flip and train:
         data_transforms.append(transforms.RandomVerticalFlip(p=0.5))
     if random_rotation and train:
         data_transforms.append(transforms.RandomRotation(degrees=(-45, 45)))
+
+    if model == 'vit' or 'ssl-vit':
+        data_transforms.append(transforms.Resize((224, 224)))
+        # data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
+    elif model == 'resnet':
+        data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
+    elif model == 'api_net':
+        data_transforms += [transforms.Resize((224, 224))]
 
     data_transforms += [transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                     std=[0.229, 0.224, 0.225])]
