@@ -122,7 +122,7 @@ class backbone_ViT(nn.Module):
     def __init__(self, drop=0.2):
         super(backbone_ViT, self).__init__()
 
-        self.vit = timm.create_model('vit_large_patch16_224', pretrained=True, dropout=drop)
+        self.vit = timm.create_model('vit_large_patch16_224', pretrained=True, drop_rate=drop)
         self.dropout = nn.Dropout(drop)
 
     def forward(self, x):
