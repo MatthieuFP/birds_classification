@@ -34,7 +34,10 @@ model = load_model(path_model=path_model,
                    model_type=args.model,
                    cfg=args.cfg,
                    use_cuda=use_cuda,
+                   dropout=0.0,
                    load_weights=1)
+
+model.eval()
 
 # Transform data
 try:
