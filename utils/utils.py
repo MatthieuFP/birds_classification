@@ -2,8 +2,10 @@ from logger import logger
 from model import *
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 import torch
 import torchvision.transforms as transforms
+import torch.nn.functional as F
 from torchvision import datasets
 
 
@@ -47,21 +49,55 @@ def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
     return model
 
 
+class Resize(object):
+    def __init__(self, size, interpolation=Image.BILINEAR):
+        self.size = size
+        self.interpolation = interpolation
+
+    def __call__(self, img):
+        old_size = img.size  # old_size[0] is in (width, height) format
+        ratio = float(self.size)/max(old_size)
+        new_size = tuple([int(x * ratio) for x in old_size])
+        return img.resize(new_size, resample=self.interpolation)
+
+
+def padding_size(image):
+    w, h = image.size
+    max_wh = np.max([w, h])
+    h_padding = (max_wh - w) / 2
+    v_padding = (max_wh - h) / 2
+    l_pad = h_padding if h_padding % 1 == 0 else h_padding+0.5
+    t_pad = v_padding if v_padding % 1 == 0 else v_padding+0.5
+    r_pad = h_padding if h_padding % 1 == 0 else h_padding-0.5
+    b_pad = v_padding if v_padding % 1 == 0 else v_padding-0.5
+    padding = (int(l_pad), int(t_pad), int(r_pad), int(b_pad))
+    return padding
+
+
+class NewPad(object):
+    def __init__(self, fill=0, padding_mode='constant'):
+        self.fill = fill
+        self.padding_mode = padding_mode
+    def __call__(self, img):
+        return transforms.Pad(padding_size(img), fill=self.fill, padding_mode=self.padding_mode)(img)
+
+
 def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, erasing=0, model='vit', train=1, size=224):
     data_transforms = []
+
+    if model == 'vit':
+        data_transforms.append(Resize(size=size), NewPad(fill=0, padding_mode='constant'))  # transforms.Resize
+    elif model == 'resnet':
+        data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
+    elif model =='api_net':
+        data_transforms += [transforms.Resize((224, 224))]
+
     if horizontal_flip and train:
         data_transforms.append(transforms.RandomHorizontalFlip(p=0.5))
     if vertical_flip and train:
         data_transforms.append(transforms.RandomVerticalFlip(p=0.5))
     if random_rotation and train:
         data_transforms.append(transforms.RandomRotation(degrees=(-45, 45)))
-
-    if model == 'vit':
-        data_transforms.append(transforms.Resize((size, size)))
-    elif model == 'resnet':
-        data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
-    elif model =='api_net':
-        data_transforms += [transforms.Resize((224, 224))]
 
     data_transforms += [transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                     std=[0.229, 0.224, 0.225])]

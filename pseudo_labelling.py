@@ -246,7 +246,7 @@ if __name__ == '__main__':
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
     parser.add_argument('--threshold', type=float, default=0.8, help='if max(prob) < threshold, unlabeled example is not'
                                                                      ' considered')
-    parser.add_argument('--negative_threshold', type=float, default=0.5, help="negative / 'noise' / 'nothing' class")
+    parser.add_argument('--negative_threshold', type=float, default=0.3, help="negative / 'noise' / 'nothing' class")
     parser.add_argument('--RUN_ID', type=str, required=True, help="RUN_ID of the pre trained model")
     parser.add_argument('--strong_augmentation', type=int, default=1, help="perform strong augmentation or not")
     parser.add_argument('--T2', type=int, default=5, help="T2 value")
