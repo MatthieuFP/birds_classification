@@ -9,7 +9,7 @@ from model import *
 from utils.utils import *
 
 parser = argparse.ArgumentParser(description='RecVis A3 evaluation script')
-parser.add_argument('--data', type=str, default='bird_dataset', metavar='D',
+parser.add_argument('--data', type=str, default='cropped_birds', metavar='D',
                     help="folder where data is located. test_images/ need to be found in the folder")
 parser.add_argument('--model', type=str, metavar='M',
                     help="model architecture, e.g. resnet"),
@@ -57,6 +57,7 @@ output_file.write("Id,Category\n")
 
 test_images = [img for img in os.listdir(test_dir) if 'jpg' in img]
 doubles = {}
+max_probs = []
 for f in tqdm(test_images):
     # Handle when both images
     if '_' in f and f.split('_')[0] not in doubles.keys():
@@ -67,6 +68,7 @@ for f in tqdm(test_images):
     if use_cuda:
         data = data.cuda()
     output = model(data)
+    max_probs.append(torch.min(output.max(dim=-1).values).data.item())
     pred = output.data.max(1, keepdim=True)[1]
 
     if '_' in f:
@@ -81,6 +83,9 @@ for k in doubles.keys():
     output_file.write("%s,%d\n" % (k, pred))
 
 output_file.close()
+
+max_probs.sort()
+print(max_probs[:30])
 
 print("Succesfully wrote " + args.outfile + ', you can upload this file to the kaggle competition website')
         

@@ -46,13 +46,11 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     model.train()
 
-
-    for batch_idx in tqdm_notebook(range(n_batches)):
+    for batch_idx in tqdm(range(n_batches)):  # tqdm_notebook
 
         p = random.random()
         if p < proba:  # 2 unlabeled examples for 1 labelled for instance
 
-            pdb.set_trace()
             (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
             del _  # memory usage
 
@@ -65,10 +63,11 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             del _  # memory usage
 
             probs = F.softmax(output_unlabeled, dim=-1)
-            index = torch.where(probs[:, :20] > threshold)[0]  # Only use images that are likely to be in our 20 classes
-            noise_index = torch.where(probs[:, :20] < negative_threshold)[0]
+            index = torch.where(probs[:, :20].max(dim=-1).values > threshold)[0]  # Only use images that are likely to be in our 20 classes
+            noise_index = torch.where(probs[:, :20].max(dim=-1).values < negative_threshold)[0]
 
             if len(noise_index):
+                pdb.set_trace()
                 n_noise += len(noise_index)
                 noise_labels = torch.Tensor(20 * len(noise_index), device=device)
                 noise_sample = output_unlabeled[noise_index]
@@ -80,8 +79,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 negative_noise_loss.backward()
                 train_batch_negative_loss.append(negative_noise_loss.item() / len(noise_index))
 
+                del noise_sample, noise_labels, output  # Free space
+
             pdb.set_trace()
-            
+
             if len(index):  # index.size()
                 n_sample += len(index)
                 weak_unlabeled_data = weak_unlabeled_data[index]
@@ -304,7 +305,6 @@ if __name__ == '__main__':
                              transform=data_transforms_dev),
         batch_size=args.batch_size, shuffle=False, num_workers=1)
 
-    pdb.set_trace()
     # Create folder results
     path_result = os.path.join(args.experiment, RUN_ID)
     if not os.path.isdir(path_result):
@@ -346,9 +346,8 @@ if __name__ == '__main__':
     epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
                               args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
                               args.threshold, args.negative_threshold, args.strong_augmentation, args.T2, args.factor,
-                              args.proba)
+                              args.proba, device)
 
-    pdb.set_trace()
     results['train_negative_noise_loss'] = train_negative_noise_loss
     results['train_unlabeled_loss'] = train_unlabeled_loss
     results['train_labeled_loss'] = train_labeled_loss
