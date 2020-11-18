@@ -27,8 +27,8 @@ class API_Net(nn.Module):
         self.conv = nn.Sequential(*layers)
         self.avg = nn.AvgPool2d(kernel_size=7, stride=1)
         self.map1 = nn.Linear(2208 * 2, 512)
-        self.map2 = nn.Linear(512, 1028)
-        self.fc = nn.Linear(1028, 20)
+        self.map2 = nn.Linear(512, 2208)
+        self.fc = nn.Linear(2208, 20)
         self.drop = nn.Dropout(p=0.25)
         self.sigmoid = nn.Sigmoid()
 
