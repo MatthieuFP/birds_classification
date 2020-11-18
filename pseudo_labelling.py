@@ -83,7 +83,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 model.train()
                 output = model(noise_sample)
 
-                negative_noise_loss = 5e-2 * criterion(output, noise_labels)
+                negative_noise_loss = criterion(output, noise_labels)
+                # Tried to add a 5e-2 factor but the model did not catch the noise examples
                 negative_noise_loss.backward()
                 train_batch_negative_loss.append(negative_noise_loss.item() / len(noise_index))
 
@@ -134,7 +135,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 data = data.cuda()
                 target = target.cuda()
 
-            output = model(data)
+            output = model.base(data)
 
             labeled_loss = criterion(output, target)
 
@@ -190,11 +191,11 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
         train_negative_noise_loss, stdout = pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda,
                                                              log_interval, train_unlabeled_loss, train_labeled_loss,
                                                              stdout, writer, optimizer, n_batches, batch_size,
-                                                             accumulation_steps,threshold, negative_threshold,
+                                                             accumulation_steps, threshold, negative_threshold,
                                                              strong_augmentation, T2, factor, proba, device,
                                                              train_negative_noise_loss)
 
-        val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
+        val_loss, accuracy, stdout, writer = validation(model.base, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
         scheduler.step()
 
