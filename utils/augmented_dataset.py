@@ -19,8 +19,8 @@ class TransformFixMatch(object):
 
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(mean=mean, std=std),
-            transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
+            transforms.Normalize(mean=mean, std=std)])
+            # transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
 
     def __call__(self, x):
         weak = self.weak(x)
