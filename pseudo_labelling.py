@@ -30,8 +30,8 @@ from uuid import uuid4
 
 
 def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log_interval, train_unlabeled_loss,
-                     train_labeled_loss, stdout, writer, optimizer, n_batches, batch_size, accumulation_steps,
-                     threshold, negative_threshold, strong_augmentation, T2, factor, proba, device,
+                     train_labeled_loss, stdout, writer, optimizer_unlabeled, optimizer_labeled, n_batches, batch_size,
+                     accumulation_steps, threshold, negative_threshold, strong_augmentation, T2, factor, proba, device,
                      train_negative_noise_loss):
 
     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
@@ -42,7 +42,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     n_noise = 0
     n_labeled = 0
 
-    optimizer.zero_grad()
+    optimizer_unlabeled.zero_grad()
+    optimizer_labeled.zero_grad()
 
     model.train()
 
@@ -88,8 +89,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 negative_noise_loss.backward()
                 train_batch_negative_loss.append(negative_noise_loss.item() / len(noise_index))
 
-                optimizer.step()
-                optimizer.zero_grad()
+                optimizer_unlabeled.step()
+                optimizer_unlabeled.zero_grad()
 
                 del noise_sample, noise_labels, output  # Free space
 
@@ -118,8 +119,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 unlabeled_loss.backward()
 
                 train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
-                optimizer.step()
-                optimizer.zero_grad()
+                optimizer_unlabeled.step()
+                optimizer_unlabeled.zero_grad()
 
                 del output, output_unlabeled, probs, pseudo_labels
 
@@ -140,9 +141,9 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             labeled_loss = criterion(output, target)
 
             # Backpropagation
-            optimizer.zero_grad()
+            optimizer_labeled.zero_grad()
             labeled_loss.backward()
-            optimizer.step()
+            optimizer_labeled.step()
 
             train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
 
@@ -175,9 +176,10 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     return model, train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, stdout
 
 
-def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, threshold, negative_threshold, strong_augmentation, T2,
-         factor, proba, device, n_batches):
+def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval,
+         scheduler_unlabeled, scheduler_labeled, early_stopping, writer, stdout, accumulation_steps, threshold,
+         negative_threshold, strong_augmentation, T2, factor, proba, device, n_batches, optimizer_unlabeled,
+         optimizer_labeled):
 
     train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, \
     val_loss, val_accuracy, epoch_time = [], [], [], [], [], []
@@ -190,14 +192,15 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
         model, train_unlabeled_loss, train_labeled_loss, \
         train_negative_noise_loss, stdout = pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda,
                                                              log_interval, train_unlabeled_loss, train_labeled_loss,
-                                                             stdout, writer, optimizer, n_batches, batch_size,
-                                                             accumulation_steps, threshold, negative_threshold,
-                                                             strong_augmentation, T2, factor, proba, device,
-                                                             train_negative_noise_loss)
+                                                             stdout, writer, optimizer_unlabeled, optimizer_labeled,
+                                                             n_batches, batch_size, accumulation_steps, threshold,
+                                                             negative_threshold, strong_augmentation, T2, factor, proba,
+                                                             device, train_negative_noise_loss)
 
         val_loss, accuracy, stdout, writer = validation(model.base, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
-        scheduler.step()
+        scheduler_labeled.step()
+        scheduler_unlabeled.step()
 
         val_accuracy.append(accuracy)
 
@@ -230,7 +233,9 @@ if __name__ == '__main__':
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
-    parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
+    parser.add_argument('--lr_unlabeled', type=float, default=1e-4, metavar='LR',
+                        help='learning rate (default: 0.01)')
+    parser.add_argument('--lr_labeled', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
@@ -341,10 +346,12 @@ if __name__ == '__main__':
         stdout += ['{} : {}'.format(str(k), str(v)) for k, v in results.items()]
         stdout.append(' ')
 
-    # Optimizer
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    # Scheduler
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
+    # Optimizer Unlabeled & Labeled
+    optimizer_unlabeled = optim.Adam(model.parameters(), lr=args.lr_unlabeled, weight_decay=args.weight_decay)
+    optimizer_labeled = optim.Adam(model.base.parameters(), lr=args.lr_labeled, weight_decay=args.weight_decay)
+    # Scheduler Unlabeled & Labeled
+    scheduler_unlabeled = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_unlabeled, T_max=args.epochs)
+    scheduler_labeled = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_labeled, T_max=args.epochs)
 
     # Set up early stopping
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=os.path.join(path_result, 'model.pt'))
@@ -354,9 +361,10 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=path_report)
     model, train_unlabeled_loss, train_labeled_loss, train_negative_noise_loss, val_loss, val_accuracy, \
     epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
-                              args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
-                              args.threshold, args.negative_threshold, args.strong_augmentation, args.T2, args.factor,
-                              args.proba, device, args.n_batches)
+                              args.log_interval, scheduler_unlabeled, scheduler_labeled, early_stopping, writer, stdout,
+                              args.accumulation_steps, args.threshold, args.negative_threshold, args.strong_augmentation,
+                              args.T2, args.factor, args.proba, device, args.n_batches, optimizer_unlabeled,
+                              optimizer_labeled)
 
     results['train_negative_noise_loss'] = train_negative_noise_loss
     results['train_unlabeled_loss'] = train_unlabeled_loss

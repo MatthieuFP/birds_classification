@@ -79,8 +79,9 @@ class SSL_ViT(nn.Module):
         super(SSL_ViT, self).__init__()
         self.base = model
         self._classifier = nn.Linear(20, 21, bias=False)
-        with torch.no_grad():
-            self._classifier.weight[:20] = torch.nn.Parameter(torch.eye(20), requires_grad=False)   # Freeze
+        torch.nn.init.xavier_uniform_(self._classifier)
+        #with torch.no_grad():
+        #    self._classifier.weight[:20] = torch.nn.Parameter(torch.eye(20), requires_grad=False)   # Freeze
 
     def forward(self, x):
         x = self.base(x)
