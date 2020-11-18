@@ -201,7 +201,7 @@ if __name__ == '__main__':
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().to(device)
     optimizer_conv = torch.optim.SGD(model.conv.parameters(), args.lr,
-                                     momentum=args.momemtum,
+                                     momentum=args.momentum,
                                      weight_decay=args.weight_decay)
 
     fc_parameters = [value for name, value in model.named_parameters() if 'conv' not in name]
