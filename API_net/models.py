@@ -21,11 +21,11 @@ class API_Net(nn.Module):
     def __init__(self, drop):
         super(API_Net, self).__init__()
 
-        #densenet161 = models.densenet161(pretrained=True)
-        #layers = list(densenet161.children())[:-1]
+        densenet161 = models.densenet161(pretrained=True)
+        layers = list(densenet161.children())[:-1]
 
         self.conv = backbone_ViT(drop=drop)
-        # self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
+        self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
         self.map1 = nn.Linear(1000 * 2, 256)
         self.map2 = nn.Linear(256, 1000)
         self.fc = nn.Linear(1000, 20)
@@ -34,9 +34,9 @@ class API_Net(nn.Module):
 
 
     def forward(self, images, targets=None, flag='train'):
-        pool_out = self.conv(images)
-        # conv_out = conv_out.permute(0, 2, 1).view(-1, 1024, 14, 14)
-        # pool_out = self.avg(conv_out).squeeze()
+        conv_out = self.conv(images)
+        conv_out = conv_out.permute(0, 2, 1).view(-1, 1024, 14, 14)
+        pool_out = self.avg(conv_out).squeeze()
 
         if flag == 'train':
             intra_pairs, inter_pairs, \
