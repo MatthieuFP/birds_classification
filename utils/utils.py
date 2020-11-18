@@ -57,8 +57,9 @@ class Resize(object):
     def __call__(self, img):
         old_size = img.size  # old_size[0] is in (width, height) format
         ratio = float(self.size)/max(old_size)
-        new_size = tuple([int(x * ratio) for x in old_size])
-        return img.resize(new_size, resample=self.interpolation)
+        new_size = [int(x * ratio) for x in old_size]
+        new_size[int(np.argmax(new_size))] = self.size  # Assert that max size is 224 and not 223 due to approx error
+        return img.resize(tuple(new_size), resample=self.interpolation)
 
 
 def padding_size(image):
