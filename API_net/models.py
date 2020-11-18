@@ -25,10 +25,10 @@ class API_Net(nn.Module):
         #layers = list(densenet161.children())[:-1]
 
         self.conv = backbone_ViT(drop=drop)
-        self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
-        self.map1 = nn.Linear(1024 * 2, 256)
-        self.map2 = nn.Linear(256, 1024)
-        self.fc = nn.Linear(1024, 20)
+        # self.avg = nn.AvgPool2d(kernel_size=14, stride=1)
+        self.map1 = nn.Linear(1000 * 2, 256)
+        self.map2 = nn.Linear(256, 1000)
+        self.fc = nn.Linear(1000, 20)
         self.drop = nn.Dropout(p=0.25)
         self.sigmoid = nn.Sigmoid()
 
@@ -122,22 +122,9 @@ class backbone_ViT(nn.Module):
     def __init__(self, drop=0.2):
         super(backbone_ViT, self).__init__()
 
-        self.ViT = load_model(path_model='experiment/31d84/model.pt', model_type='vit', dropout=drop,
-                              cfg='vit_large_patch16_224', use_cuda=True, load_weights=1)
-        self.backbone = self.ViT.vit
+        self.vit = timm.create_model('vit_large_patch16_224', pretrained=True, dropout=drop)
+        self.dropout = nn.Dropout(drop)
 
     def forward(self, x):
-        B = x.shape[0]
-        x = self.backbone.patch_embed(x)
-
-        cls_tokens = self.backbone.cls_token.expand(B, -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x = x + self.backbone.pos_embed
-        x = self.backbone.pos_drop(x)
-
-        for blk in self.backbone.blocks:
-            x = blk(x)
-
-        # x = self.backbone.norm(x)
-        return x[:, 1:, :]
+        return self.dropout(self.vit(x))
 

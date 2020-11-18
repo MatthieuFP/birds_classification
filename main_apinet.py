@@ -204,9 +204,8 @@ if __name__ == '__main__':
                                       weight_decay=args.weight_decay)
 
     fc_parameters = [value for name, value in model.named_parameters() if 'conv' not in name]
-    optimizer_fc = torch.optim.SGD(fc_parameters, args.lr,
-                                   momentum=args.momentum,
-                                   weight_decay=args.weight_decay)
+    optimizer_fc = torch.optim.Adam(fc_parameters, args.lr,
+                                    weight_decay=args.weight_decay)
 
     # Transform data
     data_transforms_train = data_transformation(horizontal_flip=args.horizontal_flip,
