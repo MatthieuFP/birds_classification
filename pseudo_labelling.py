@@ -68,13 +68,16 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
             del _  # memory usage
 
             probs = F.softmax(output_unlabeled, dim=-1)
-            index = torch.where(probs[:, :20].max(dim=-1).values > threshold)[0]  # Only use images that are likely to be in our 20 classes
-            noise_index = torch.where(probs[:, :20].max(dim=-1).values < negative_threshold)[0]
+            index = torch.where(probs[:, :20].max(dim=-1).values > threshold)[0].cuda()
+            # Only use images that are likely to be in our 20 classes
+            noise_index = torch.where(probs[:, :20].max(dim=-1).values < negative_threshold)[0].cuda()
 
             if len(noise_index):
                 pdb.set_trace()
                 n_noise += len(noise_index)
-                noise_labels = torch.Tensor([20] * len(noise_index), device=device).long()
+                noise_labels = torch.Tensor([20] * len(noise_index)).long()
+                if use_cuda:
+                    noise_labels = noise_labels.cuda()
                 noise_sample = weak_unlabeled_data[noise_index]
 
                 model.train()
