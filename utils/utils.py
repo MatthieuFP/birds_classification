@@ -86,7 +86,7 @@ def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, e
     data_transforms = []
 
     if model == 'vit':
-        data_transforms.append(Resize(size=size), NewPad(fill=0, padding_mode='constant'))  # transforms.Resize
+        data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
     elif model == 'resnet':
         data_transforms += [transforms.Resize(size), transforms.CenterCrop(224)]
     elif model =='api_net':
