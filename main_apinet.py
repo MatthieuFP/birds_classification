@@ -200,12 +200,14 @@ if __name__ == '__main__':
 
     # define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().to(device)
-    optimizer_conv = torch.optim.Adam(model.conv.parameters(), args.lr,
-                                      weight_decay=args.weight_decay)
+    optimizer_conv = torch.optim.SGD(model.conv.parameters(), args.lr,
+                                     momentum=args.momemtum,
+                                     weight_decay=args.weight_decay)
 
     fc_parameters = [value for name, value in model.named_parameters() if 'conv' not in name]
-    optimizer_fc = torch.optim.Adam(fc_parameters, args.lr,
-                                    weight_decay=args.weight_decay)
+    optimizer_fc = torch.optim.SGD(fc_parameters, args.lr,
+                                   momentum=args.momentum,
+                                   weight_decay=args.weight_decay)
 
     # Transform data
     data_transforms_train = data_transformation(horizontal_flip=args.horizontal_flip,
