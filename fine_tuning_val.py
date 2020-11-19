@@ -109,7 +109,6 @@ if __name__ == '__main__':
     data_transforms_train = data_transformation(horizontal_flip=args.horizontal_flip,
                                                 vertical_flip=args.vertical_flip,
                                                 model=args.model,
-                                                size=args.size,
                                                 train=1)
     val_loader = torch.utils.data.DataLoader(datasets.ImageFolder(args.data + '/val_images',
                                                                   transform=data_transforms_train),
