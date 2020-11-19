@@ -29,7 +29,7 @@ import pdb
 from uuid import uuid4
 
 
-def pseudo_labelling(model, epoch, train_loader, test_loader, use_cuda, log_interval, train_unlabeled_loss,
+def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log_interval, train_unlabeled_loss,
                      train_labeled_loss, stdout, writer, optimizer, n_batches, batch_size, accumulation_steps, threshold,
                      strong_augmentation, T2, factor, proba, device):
 
@@ -53,7 +53,7 @@ def pseudo_labelling(model, epoch, train_loader, test_loader, use_cuda, log_inte
         if p < proba:  # 2 unlabeled examples for 1 labelled for instance
 
             pdb.set_trace()
-            (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(test_loader))
+            (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
             del _  # memory usage
 
             if use_cuda:
@@ -140,18 +140,18 @@ def pseudo_labelling(model, epoch, train_loader, test_loader, use_cuda, log_inte
     train_unlabeled_loss.append(np.mean(train_batch_unlabeled_loss))
     train_labeled_loss.append(np.mean(train_batch_labeled_loss))
     print('\n')
-    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(test_loader.dataset)), stdout)
+    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(unlabeled_loader.dataset)), stdout)
     stdout = logging('Unlabeled Train loss Epoch {} : {}'.format(epoch, train_unlabeled_loss[-1]), stdout)
 
     return model, train_unlabeled_loss, train_labeled_loss, stdout
 
 
-def main(model, epochs, batch_size, train_loader, test_loader, val_loader, use_cuda, log_interval, scheduler,
+def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
          early_stopping, writer, stdout, accumulation_steps, threshold,  strong_augmentation, T2, factor, proba, device,
          optimizer):
 
     train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
-    n_batches = (len(train_loader.dataset) + len(test_loader.dataset)) // batch_size
+    n_batches = (len(train_loader.dataset) + len(unlabeled_loader.dataset)) // batch_size
 
     for epoch in range(1, epochs + 1):
 
@@ -159,10 +159,11 @@ def main(model, epochs, batch_size, train_loader, test_loader, val_loader, use_c
         t0 = time.time()
 
         model, train_unlabeled_loss, train_labeled_loss, stdout = pseudo_labelling(model, epoch, train_loader,
-                                                                                   test_loader, use_cuda, log_interval,
-                                                                                   train_unlabeled_loss, train_labeled_loss,
-                                                                                   stdout, writer, optimizer, n_batches,
-                                                                                   batch_size, accumulation_steps, threshold,
+                                                                                   unlabeled_loader, use_cuda,
+                                                                                   log_interval, train_unlabeled_loss,
+                                                                                   train_labeled_loss, stdout, writer,
+                                                                                   optimizer, n_batches, batch_size,
+                                                                                   accumulation_steps, threshold,
                                                                                    strong_augmentation, T2, factor, proba,
                                                                                    device)
 
@@ -272,7 +273,7 @@ if __name__ == '__main__':
                              transform=data_transforms_train),
         batch_size=args.batch_size, shuffle=True, num_workers=1)
 
-    test_loader = load_nabirds(args.batch_size, TransformFixMatch(), data='cropped_birds/test_images')
+    unlabeled_loader = load_nabirds(args.batch_size, TransformFixMatch())
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(args.data + '/val_images',
@@ -317,10 +318,10 @@ if __name__ == '__main__':
     path_report = os.path.join(path_result, 'report')
     writer = SummaryWriter(log_dir=path_report)
     model, train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, \
-    epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, test_loader, val_loader, use_cuda,
-                              args.log_interval, scheduler, early_stopping, writer, stdout,
-                              args.accumulation_steps, args.threshold, args.strong_augmentation, args.T2, args.factor,
-                              args.proba, device, optimizer)
+    epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
+                              args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
+                              args.threshold, args.strong_augmentation, args.T2, args.factor, args.proba, device,
+                              optimizer)
 
     results['train_unlabeled_loss'] = train_unlabeled_loss
     results['train_labeled_loss'] = train_labeled_loss
