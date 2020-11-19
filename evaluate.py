@@ -23,6 +23,7 @@ parser.add_argument('--outfile', type=str, default='experiment/kaggle.csv', meta
 
 args = parser.parse_args()
 use_cuda = torch.cuda.is_available()
+print('Using GPU : {}'.format(use_cuda))
 
 path = os.getcwd()
 path_experiments = os.path.join(path, args.experiment)
