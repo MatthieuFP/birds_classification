@@ -94,7 +94,7 @@ class SSL_ViT(nn.Module):
 class stacked_models(nn.Module):
     def __init__(self, cfg, drop, pretrained=True):
         super(stacked_models, self).__init__()
-        self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.0)
+        self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.2)
         self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
         self.layer1 = nn.Linear(2000, 512)
         self.layer2 = nn.Linear(512, 20)
