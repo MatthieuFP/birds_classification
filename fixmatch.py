@@ -43,7 +43,7 @@ def pseudo_labelling(model, epoch, train_loader, test_loader, use_cuda, log_inte
 
     model.train()
 
-    for batch_idx in tqdm(range(n_batches)):  # tqdm_notebook
+    for batch_idx in tqdm_notebook(range(n_batches)):  # tqdm_notebook
 
         if not (batch_idx + 1) % log_interval:
             print('{} batch : {} test unlabeled examples - {} sample examples'.format(batch_idx + 1, n_sample,
