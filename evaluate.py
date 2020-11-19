@@ -81,7 +81,7 @@ for f in tqdm(test_images):
     pred = torch.argmax(output, dim=-1)       # output.data.max(1, keepdim=True)[1]
     reverse_pred = torch.argmax(reverse_output, dim=-1)
 
-    if torch.max(output, dim=-1).item() < torch.max(reverse_output, dim=-1):
+    if torch.max(output, dim=-1).data.item() < torch.max(reverse_output, dim=-1).data.item():
         pred = reverse_pred
         output = reverse_output
 
