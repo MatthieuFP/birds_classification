@@ -125,8 +125,8 @@ def alpha(t, T2, factor):
         return factor
 
 
-def load_nabirds(batch_size, data_transforms):
-    loader = torch.utils.data.DataLoader(datasets.ImageFolder('cropped_NAbirds',
+def load_nabirds(batch_size, data_transforms, data='cropped_NAbirds'):
+    loader = torch.utils.data.DataLoader(datasets.ImageFolder(data,
                                                               transform=data_transforms),
                                                               batch_size=batch_size,
                                                               shuffle=True,
