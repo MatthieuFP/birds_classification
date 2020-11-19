@@ -255,7 +255,6 @@ if __name__ == '__main__':
                                                                          args.log_interval, scheduler, early_stopping,
                                                                          writer, stdout, args.accumulation_steps)
 
-    pdb.set_trace()
     results['train_loss'] = train_loss
     results['val_loss'] = val_loss
     results['val_accuracy'] = val_accuracy

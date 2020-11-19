@@ -21,16 +21,23 @@ def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
     device = torch.device('cuda' if use_cuda else 'cpu')
     if model_type == 'resnet101':
         model = ResNet_Net(drop=dropout)
+
     elif model_type == 'vit':
         model = ViT(cfg=cfg, drop=dropout, pretrained=bool(1 - load_weights))
+
     elif model_type == 'ssl-vit':
         vit_model = ViT(cfg=cfg, drop=dropout, pretrained=0)
         state_dict = torch.load(path_model, map_location=device)
         vit_model.load_state_dict(state_dict)
         model = SSL_ViT(model=vit_model)
         model.eval()
+
     elif model_type == 'default':
         model = Net()
+
+    elif model_type == 'stacked':
+        model = stacked_models(cfg=cfg, drop=dropout, pretrained=True)
+
     else:
         raise NameError('model not found')
     logger.info("{} model loaded".format(model_type))

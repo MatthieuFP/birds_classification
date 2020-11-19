@@ -106,7 +106,7 @@ if __name__ == '__main__':
                        use_cuda=True,
                        load_weights=1)
     model.to(device)
-    
+
     # Transform data
     data_transforms_train = data_transformation(horizontal_flip=args.horizontal_flip,
                                                 vertical_flip=args.vertical_flip,
