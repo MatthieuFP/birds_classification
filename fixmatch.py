@@ -36,6 +36,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
     train_batch_unlabeled_loss = []
     train_batch_labeled_loss = []
+    n_unlabeled_chosen = 0
     n_sample = 0
     n_labeled = 0
 
@@ -51,6 +52,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
         p = random.random()
         if p < proba:  # 2 unlabeled examples for 1 labelled for instance
+            n_unlabeled_chosen += batch_size
 
             pdb.set_trace()
             (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
@@ -140,7 +142,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     train_unlabeled_loss.append(np.mean(train_batch_unlabeled_loss))
     train_labeled_loss.append(np.mean(train_batch_labeled_loss))
     print('\n')
-    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(unlabeled_loader.dataset)), stdout)
+    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, n_unlabeled_chosen), stdout)
     stdout = logging('Unlabeled Train loss Epoch {} : {}'.format(epoch, train_unlabeled_loss[-1]), stdout)
 
     return model, train_unlabeled_loss, train_labeled_loss, stdout
@@ -317,6 +319,7 @@ if __name__ == '__main__':
     # Summary Writer - Tensorboard
     path_report = os.path.join(path_result, 'report')
     writer = SummaryWriter(log_dir=path_report)
+
     model, train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, \
     epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
                               args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
