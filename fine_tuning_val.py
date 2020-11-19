@@ -107,8 +107,7 @@ if __name__ == '__main__':
                        load_weights=1)
     # Transform data
     data_transforms_train = data_transformation(horizontal_flip=args.horizontal_flip,
-                                                random_rotation=args.random_rotation,
-                                                erasing=args.erasing,
+                                                vertical_flip=args.vertical_flip,
                                                 model=args.model,
                                                 size=args.size,
                                                 train=1)
