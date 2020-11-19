@@ -202,8 +202,6 @@ if __name__ == '__main__':
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
-                        help='SGD momentum (default: 0.5)')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay ADAM optimizer')
     parser.add_argument('--seed', type=int, default=42, metavar='S',
                         help='random seed (default: 1)')
