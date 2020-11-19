@@ -151,7 +151,7 @@ def main(model, epochs, batch_size, train_loader, test_loader, val_loader, use_c
          optimizer):
 
     train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
-    n_batches = len(train_loader.dataset) + len(test_loader.dataset)
+    n_batches = (len(train_loader.dataset) + len(test_loader.dataset)) // batch_size
 
     for epoch in range(1, epochs + 1):
 
