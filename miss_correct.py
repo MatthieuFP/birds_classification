@@ -19,7 +19,7 @@ def pil_loader(path):
             return img.convert('RGB')
 
 
-def miss_correct(model, val_images, val_labels):
+def missing_pred(model, val_images, val_labels):
     y_true = []
     y_pred = []
     miss = []
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     val_images = {cat: [img for img in os.listdir(os.path.join(val_dir, cat)) if 'jpg' in img] for cat in os.listdir(val_dir)}
     val_labels = {cat: i for i, cat in enumerate(val_images.keys())}
 
-    y_true, y_pred, miss_pred, n_miss = miss_correct(models, val_images, val_labels)
+    y_true, y_pred, miss_pred, n_miss = missing_pred(models, val_images, val_labels)
 
     classification_report(y_true, y_pred, target_names=list(val_labels.keys()))
 
