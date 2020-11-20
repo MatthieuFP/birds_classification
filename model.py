@@ -105,7 +105,6 @@ class stacked_models(nn.Module):
 
     def forward(self, x):
         x1 = self.vit(x)
-        pdb.set_trace()
         x2 = self.inceptionv3(self.resize(x))
         x_cat = torch.cat((x1, x2), dim=-1)
         x_out = self.layer1(self.dropout(x_cat))

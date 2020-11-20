@@ -43,9 +43,9 @@ model.eval()
 
 # Transform data
 data_transforms_dev = data_transformation(model=args.model, size=args.size, train=0)
-data_reverse = transforms.Compose([transforms.RandomHorizontalFlip(1.), transforms.Resize((224, 224)),
-                                   transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                                               std=[0.229, 0.224, 0.225])])
+#data_reverse = transforms.Compose([transforms.RandomHorizontalFlip(1.), transforms.Resize((224, 224)),
+#                                   transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
+#                                                                               std=[0.229, 0.224, 0.225])])
 
 test_dir = args.data + '/test_images/mistery_category'
 
