@@ -100,7 +100,7 @@ def data_transformation(horizontal_flip=1, vertical_flip=1, random_rotation=0, e
     if random_rotation and train:
         data_transforms.append(transforms.RandomRotation(degrees=(-45, 45)))
 
-    if model == 'vit' or 'ssl-vit':
+    if model == 'vit' or 'ssl-vit' or 'stacked':
         data_transforms.append(transforms.Resize((224, 224)))
         # data_transforms += [Resize(size=size), NewPad(fill=0, padding_mode='constant')]  # transforms.Resize
     elif model == 'resnet':
