@@ -86,7 +86,7 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(8, 8))
     columns = n_miss // 2
     rows = n_miss - columns
-    for idx in range(1, columns * rows + 1):
+    for idx in range(n_miss):
         fig.add_subplot(rows, columns, idx)
         plt.imshow(miss_pred[idx])
 
