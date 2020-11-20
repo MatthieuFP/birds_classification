@@ -33,6 +33,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         # optimizer.zero_grad()
         output = model(data)
         criterion = torch.nn.CrossEntropyLoss(loss_weights)   # reduction='mean'
+        pdb.set_trace()
         loss = criterion(output, target)
         loss.backward()
 
