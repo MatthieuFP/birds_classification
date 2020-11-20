@@ -43,8 +43,6 @@ def miss_correct(model, val_images, val_labels):
 
 if __name__ == '__main__':
 
-
-
     parser = argparse.ArgumentParser(description='RecVis A3 evaluation script')
     parser.add_argument('--data', type=str, default='cropped_birds', metavar='D',
                         help="folder where data is located. test_images/ need to be found in the folder")
@@ -66,7 +64,7 @@ if __name__ == '__main__':
     path_experiments = os.path.join(path, args.experiment)
     path_id = os.path.join(path_experiments, args.RUN_ID)
     path_model = os.path.join(path_id, 'model.pt')
-    val_dir = os.path.join(args.data, 'cropped_birds', 'val_images')
+    val_dir = os.path.join(args.data, 'val_images')
     data_transforms_dev = data_transformation(model=args.model, size=args.size, train=0)
 
     # Load model
@@ -91,6 +89,8 @@ if __name__ == '__main__':
     for idx in range(1, columns * rows + 1):
         fig.add_subplot(rows, columns, idx)
         plt.imshow(miss_pred[idx])
+
+    plt.axis('off')
     plt.show()
 
 
