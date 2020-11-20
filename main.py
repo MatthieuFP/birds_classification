@@ -20,9 +20,9 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     optimizer.zero_grad()
     model.train()
     train_batch_loss = []
-    loss_weights = torch.ones(20)
-    loss_weights[16] = 3
-    loss_weights = loss_weights.to(device)
+    #loss_weights = torch.ones(20)
+    #loss_weights[16] = 3
+    #loss_weights = loss_weights.to(device)
 
     pdb.set_trace()
     for batch_idx, (data, target) in tqdm(enumerate(train_loader)):
@@ -32,7 +32,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
 
         # optimizer.zero_grad()
         output = model(data)
-        criterion = torch.nn.CrossEntropyLoss(loss_weights)   # reduction='mean'
+        criterion = torch.nn.CrossEntropyLoss(reduction='mean')   # loss_weights
         loss = criterion(output, target)
         loss.backward()
 
