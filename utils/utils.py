@@ -36,7 +36,7 @@ def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
         model = Net()
 
     elif model_type == 'stacked':
-        model = stacked_models(cfg=cfg, drop=dropout, pretrained=True)
+        model = stacked_models(cfg=cfg, drop=dropout, pretrained=bool(1 - load_weights))
 
     else:
         raise NameError('model not found')
