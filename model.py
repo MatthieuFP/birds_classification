@@ -112,3 +112,6 @@ class stacked_models(nn.Module):
         return x_out
 
 
+model = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x16d_wsl')
+
+

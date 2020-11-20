@@ -17,8 +17,7 @@ from uuid import uuid4
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
           accumulation_steps, device):
 
-    optimizer_vit.zero_grad()
-    optimizer_inc.zero_grad()
+    optimizer.zero_grad()
     model.train()
     train_batch_loss = []
     #loss_weights = torch.ones(20)
@@ -38,11 +37,8 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         loss.backward()
 
         if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
-            optimizer_vit.step()
-            optimizer_inc.step()
-
-            optimizer_vit.zero_grad()
-            optimizer_inc.zero_grad()
+            optimizer.step()
+            optimizer.zero_grad()
 
         # optimizer.step()
         if batch_idx % log_interval == 0:
@@ -100,7 +96,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer):
     return val_loss, score.data.item(), stdout, writer
 
 
-def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler_vit, scheduler_inc,
+def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler,
          early_stopping, writer, stdout, accumulation_steps, device):
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
@@ -113,8 +109,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
                                           stdout, writer, n_batches, batch_size, accumulation_steps, device)
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
-        scheduler_vit.step()
-        scheduler_inc.step()
+        scheduler.step()
 
         val_accuracy.append(accuracy)
 
@@ -245,22 +240,23 @@ if __name__ == '__main__':
         stdout.append(' ')
 
     # Optimizer
-    #if args.optimizer == 'adam':
-    #    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    #elif args.optimizer == 'sgd':
-    #    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-    optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
+    if args.optimizer == 'adam':
+        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    elif args.optimizer == 'sgd':
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    #optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
 
-    fc_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]
-    pdb.set_trace()
-    optimizer_inc = torch.optim.SGD(fc_parameters, lr=args.lr_inc,
-                                    momentum=args.momentum,
-                                    weight_decay=args.weight_decay)
+    #fc_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]
+    #pdb.set_trace()
+    #optimizer_inc = torch.optim.SGD(fc_parameters, lr=args.lr_inc,
+    #                                momentum=args.momentum,
+    #                                weight_decay=args.weight_decay)
 
 
     # Scheduler
-    scheduler_vit = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_vit, T_max=args.epochs)
-    scheduler_inc = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_inc, T_max=args.epochs)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
+    #scheduler_vit = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_vit, T_max=args.epochs)
+    #scheduler_inc = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_inc, T_max=args.epochs)
 
 
     # Set up early stopping
@@ -271,7 +267,7 @@ if __name__ == '__main__':
     writer = SummaryWriter(log_dir=path_report)
     model, train_loss, val_loss, val_accuracy, epoch_time, stdout = main(model, args.epochs, args.batch_size,
                                                                          train_loader, val_loader, use_cuda,
-                                                                         args.log_interval, scheduler_vit, scheduler_inc,
+                                                                         args.log_interval, scheduler,
                                                                          early_stopping, writer, stdout,
                                                                          args.accumulation_steps, device)
 
