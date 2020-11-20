@@ -15,7 +15,7 @@ from uuid import uuid4
 
 
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
-          accumulation_steps):
+          accumulation_steps, device):
 
     optimizer.zero_grad()
     model.train()
@@ -32,7 +32,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
 
         # optimizer.zero_grad()
         output = model(data)
-        criterion = torch.nn.CrossEntropyLoss(weight=loss_weights)   # reduction='mean'
+        criterion = torch.nn.CrossEntropyLoss(loss_weights)   # reduction='mean'
         loss = criterion(output, target)
         loss.backward()
 
@@ -97,7 +97,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer):
 
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler, early_stopping, writer,
-         stdout, accumulation_steps):
+         stdout, accumulation_steps, device):
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -106,7 +106,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
-                                          stdout, writer, n_batches, batch_size, accumulation_steps)
+                                          stdout, writer, n_batches, batch_size, accumulation_steps, device)
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
         scheduler.step()
@@ -256,7 +256,7 @@ if __name__ == '__main__':
     model, train_loss, val_loss, val_accuracy, epoch_time, stdout = main(model, args.epochs, args.batch_size,
                                                                          train_loader, val_loader, use_cuda,
                                                                          args.log_interval, scheduler, early_stopping,
-                                                                         writer, stdout, args.accumulation_steps)
+                                                                         writer, stdout, args.accumulation_steps, device)
 
     results['train_loss'] = train_loss
     results['val_loss'] = val_loss
