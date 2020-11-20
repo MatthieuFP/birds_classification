@@ -1,6 +1,7 @@
 import argparse
 import json
 import os
+import random
 import time
 from utils.utils import *
 import numpy as np
@@ -15,7 +16,7 @@ from uuid import uuid4
 
 
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
-          accumulation_steps, device):
+          accumulation_steps, device, blurring=0):
 
     optimizer.zero_grad()
     model.train()
@@ -27,6 +28,10 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     pdb.set_trace()
     for batch_idx, (data, target) in tqdm(enumerate(train_loader)):
         n_iter = batch_idx + (epoch - 1) * n_batches
+
+        if random.random() < 0.25:  # Blur the Image with probability 1/4
+            g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
+            data = g_blur(data)
         if use_cuda:
             data, target = data.cuda(), target.cuda()
 
@@ -67,11 +72,16 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     return model, train_loss, stdout
 
 
-def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer):
+def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blurring=0):
     model.eval()
     validation_loss = 0
     correct = 0
     for data, target in tqdm(val_loader):
+
+        if random.random() < 0.25:  # Blur the Image with probability 1/4
+            g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
+            data = g_blur(data)
+
         if use_cuda:
             data, target = data.cuda(), target.cuda()
         output = model(data)
@@ -97,7 +107,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer):
 
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, device):
+         early_stopping, writer, stdout, accumulation_steps, device, blurring=0):
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -106,8 +116,9 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
-                                          stdout, writer, n_batches, batch_size, accumulation_steps, device)
-        val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
+                                          stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring)
+        val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
+                                                        blurring)
 
         scheduler.step()
 
@@ -166,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--erasing', type=int, default=1, help="perform random erasing or not"),
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM"),
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
+    parser.add_argument('--blurring', type=int, default=0, help="Perform Gaussian blur or not")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -232,6 +244,7 @@ if __name__ == '__main__':
                    "horizontal_flip": args.horizontal_flip,
                    "vertical_flip": args.vertical_flip,
                    "random_rotation": args.random_rotation,
+                   "Gaussian blur": args.blurring,
                    "erasing": args.erasing}
         if args.model == 'vit':
             results['cfg'] = args.cfg
@@ -269,7 +282,7 @@ if __name__ == '__main__':
                                                                          train_loader, val_loader, use_cuda,
                                                                          args.log_interval, scheduler,
                                                                          early_stopping, writer, stdout,
-                                                                         args.accumulation_steps, device)
+                                                                         args.accumulation_steps, device, args.blurring)
 
     results['train_loss'] = train_loss
     results['val_loss'] = val_loss
