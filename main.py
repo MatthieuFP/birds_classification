@@ -45,8 +45,6 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
             optimizer.step()
             optimizer.zero_grad()
 
-            scheduler.step()
-
         # optimizer.step()
         if batch_idx % log_interval == 0:
           #  writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
@@ -122,7 +120,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
                                                         blurring)
 
-        # scheduler.step()
+        scheduler.step()
 
         val_accuracy.append(accuracy)
 
