@@ -3,6 +3,7 @@ from model import *
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
+import pdb
 import torch
 import torchvision.transforms as transforms
 import torch.nn.functional as F
@@ -18,7 +19,7 @@ def logging(message, stdout):
 
 def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
     # Load model
-    device = torch.device('cuda' if use_cuda else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     if model_type == 'resnet101':
         model = ResNet_Net(drop=dropout)
 
@@ -46,10 +47,11 @@ def load_model(path_model, model_type, dropout, cfg, use_cuda, load_weights=1):
         state_dict = torch.load(path_model, map_location=device)
         model.load_state_dict(state_dict)
         model.eval()
+        print("Weights loaded")
 
     if use_cuda:
         print('Using GPU')
-        model.cuda()
+        model.to(device)
     else:
         print('Using CPU')
 

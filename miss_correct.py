@@ -25,7 +25,8 @@ def missing_pred(model, val_images, val_labels):
     miss = []
     n_miss = 0
     for cat, imgs in val_images.items():
-        for img in imgs:
+        print(cat)
+        for img in tqdm(imgs):
             path_img = os.path.join(val_dir, cat, img)
             data = data_transforms_dev(pil_loader(path_img)).unsqueeze(0).to(device)
 
@@ -71,25 +72,25 @@ if __name__ == '__main__':
     model = load_model(path_model=path_model,
                        model_type=args.model,
                        cfg=args.cfg,
-                       use_cuda=use_cuda,
+                       use_cuda=1,
                        dropout=0.0,
                        load_weights=1)
     model.eval()
 
+    val_index = datasets.ImageFolder(args.data + '/val_images', transform=data_transforms_dev).class_to_idx
     val_images = {cat: [img for img in os.listdir(os.path.join(val_dir, cat)) if 'jpg' in img] for cat in os.listdir(val_dir)}
-    val_labels = {cat: i for i, cat in enumerate(val_images.keys())}
 
-    y_true, y_pred, miss_pred, n_miss = missing_pred(model, val_images, val_labels)
+    y_true, y_pred, miss_pred, n_miss = missing_pred(model, val_images, val_index)
 
-    classification_report(y_true, y_pred, target_names=list(val_labels.keys()))
+    print(classification_report(y_true, y_pred, target_names=list(val_index.keys())))
 
-    fig, axs = plt.subplots(8, 8)
-    columns = n_miss // 2
-    rows = n_miss - columns
-    for idx in range(1, columns * rows + 1):
-        axs[idx].imshow(miss_pred[idx])
+    fig = plt.figure(figsize=(20, 20))
+    gs = fig.add_gridspec(8, 1)
+    for idx in range(n_miss):
+        axs = fig.add_subplot(gs[idx])
+        axs.imshow(miss_pred[idx])
+        axs.set_axis_off()
 
-    plt.axis('off')
     plt.show()
 
 
