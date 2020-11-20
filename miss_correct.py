@@ -25,8 +25,7 @@ def missing_pred(model, val_images, val_labels):
     miss = []
     n_miss = 0
     for cat, imgs in val_images.items():
-        print(cat)
-        for img in tqdm(imgs):
+        for img in imgs:
             path_img = os.path.join(val_dir, cat, img)
             data = data_transforms_dev(pil_loader(path_img)).unsqueeze(0).to(device)
 
