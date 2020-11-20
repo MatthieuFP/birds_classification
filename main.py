@@ -29,7 +29,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     for batch_idx, (data, target) in tqdm(enumerate(train_loader)):
         n_iter = batch_idx + (epoch - 1) * n_batches
 
-        if random.random() < 0.25:  # Blur the Image with probability 1/4
+        if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
             g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
             data = g_blur(data)
         if use_cuda:
@@ -44,6 +44,8 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
             optimizer.step()
             optimizer.zero_grad()
+
+            scheduler.step()
 
         # optimizer.step()
         if batch_idx % log_interval == 0:
@@ -78,7 +80,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blu
     correct = 0
     for data, target in tqdm(val_loader):
 
-        if random.random() < 0.25:  # Blur the Image with probability 1/4
+        if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
             g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
             data = g_blur(data)
 
@@ -120,7 +122,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
                                                         blurring)
 
-        scheduler.step()
+        # scheduler.step()
 
         val_accuracy.append(accuracy)
 
@@ -154,8 +156,6 @@ if __name__ == '__main__':
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--lr_vit', type=float, default=2e-5)
-    parser.add_argument('--lr_inc', type=float, default=2e-3)
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--optimizer', type=str, default='adam', help='Adam or SGD optimizer')
