@@ -93,7 +93,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                 else:
                     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
                     unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
-                    
+
                 unlabeled_loss.backward()
 
                 train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
@@ -209,6 +209,7 @@ if __name__ == '__main__':
                         help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=10, metavar='N',
                         help='number of epochs to train (default: 10)')
+    parser.add_argument('--experiment', type=str, default='experiment')
     parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='weight decay ADAM optimizer')
@@ -216,8 +217,6 @@ if __name__ == '__main__':
                         help='random seed (default: 1)')
     parser.add_argument('--log_interval', type=int, default=200, metavar='N',
                         help='how many batches to wait before logging training status')
-    parser.add_argument('--experiment', type=str, default='semi_supervized_experiment', metavar='E',
-                        help='folder where experiment outputs are located.')
     parser.add_argument('--model', type=str, default='vit', help='model to run')
     parser.add_argument('--dropout', type=float, default=0.2, help='dropout probability')
     parser.add_argument('--patience', type=int, default=5, help="Early stopping patience")
@@ -252,13 +251,13 @@ if __name__ == '__main__':
 
     path = os.getcwd()
     path_experiments = os.path.join(path, 'semi_supervized_experiment')
-    path_id = os.path.join("experiment", args.RUN_ID)
+    path_id = os.path.join(args.experiment, args.RUN_ID)
     path_load_model = os.path.join(path_id, 'model.pt')
     path_model = os.path.join(path_experiments, RUN_ID, 'model.pt')
 
     # Create experiment folder
-    if not os.path.isdir(args.experiment):
-        os.makedirs(args.experiment)
+    if not os.path.isdir("semi_supervized_experiment"):
+        os.makedirs("semi_supervized_experiment")
 
     # Load model
     model = load_model(path_model=path_load_model,
@@ -290,7 +289,7 @@ if __name__ == '__main__':
         batch_size=args.batch_size, shuffle=False, num_workers=1)
 
     # Create folder results
-    path_result = os.path.join(args.experiment, RUN_ID)
+    path_result = os.path.join("semi_supervized_experiment", RUN_ID)
     if not os.path.isdir(path_result):
         os.makedirs(path_result)
         results = {'RUN_ID': RUN_ID,
