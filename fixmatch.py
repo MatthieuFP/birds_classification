@@ -31,7 +31,7 @@ from uuid import uuid4
 
 def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log_interval, train_unlabeled_loss,
                      train_labeled_loss, stdout, writer, optimizer, n_batches, batch_size, accumulation_steps, threshold,
-                     strong_augmentation, T2, factor, proba, device, loss_smoothing=0):
+                     strong_augmentation, T2, factor, proba, device, loss_smoothing=0, smooth_prob=0.2):
 
     train_batch_unlabeled_loss = []
     train_batch_labeled_loss = []
@@ -89,7 +89,8 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
                 if loss_smoothing:
                     unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * smooth_loss(target=target, output=output,
-                                                                                      n_classes=20, smoothing=0.2)
+                                                                                      n_classes=20,
+                                                                                      smoothing=smooth_prob)
                 else:
                     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
                     unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
@@ -156,7 +157,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
 def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, use_cuda, log_interval, scheduler,
          early_stopping, writer, stdout, accumulation_steps, threshold,  strong_augmentation, T2, factor, proba, device,
-         optimizer, loss_smoothing=0):
+         optimizer, loss_smoothing=0, smooth_prob=0.2):
 
     train_unlabeled_loss, train_labeled_loss, val_loss, val_accuracy, epoch_time = [], [], [], [], []
     n_batches = (len(train_loader.dataset) + len(unlabeled_loader.dataset)) // batch_size
@@ -173,7 +174,7 @@ def main(model, epochs, batch_size, train_loader, unlabeled_loader, val_loader, 
                                                                                    optimizer, n_batches, batch_size,
                                                                                    accumulation_steps, threshold,
                                                                                    strong_augmentation, T2, factor, proba,
-                                                                                   device, loss_smoothing)
+                                                                                   device, loss_smoothing, smooth_prob)
 
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer)
 
@@ -236,6 +237,7 @@ if __name__ == '__main__':
     parser.add_argument('--factor', type=int, default=2, help="factor value")
     parser.add_argument('--proba', type=float, default=0.66)
     parser.add_argument('--loss_smoothing', type=int, default=0)
+    parser.add_argument('--smooth_prob', type=str, default=0.2)
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -333,7 +335,7 @@ if __name__ == '__main__':
     epoch_time, stdout = main(model, args.epochs, args.batch_size, train_loader, unlabeled_loader, val_loader, use_cuda,
                               args.log_interval, scheduler, early_stopping, writer, stdout, args.accumulation_steps,
                               args.threshold, args.strong_augmentation, args.T2, args.factor, args.proba, device,
-                              optimizer, args.loss_smoothing)
+                              optimizer, args.loss_smoothing, args.smooth_prob)
 
     results['train_unlabeled_loss'] = train_unlabeled_loss
     results['train_labeled_loss'] = train_labeled_loss
