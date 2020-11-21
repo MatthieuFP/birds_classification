@@ -257,7 +257,7 @@ if __name__ == '__main__':
         # optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     elif args.optimizer == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-        
+
     #optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
 
     #fc_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]

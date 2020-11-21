@@ -40,7 +40,7 @@ def missing_pred(model, val_images, val_labels):
             y_pred.append(pred)
             y_true.append(val_labels[cat])
 
-    return y_true, y_pred, miss, n_miss
+    return y_true, y_pred, miss, n_miss, miss_prob
 
 
 if __name__ == '__main__':
@@ -81,7 +81,9 @@ if __name__ == '__main__':
     val_index = datasets.ImageFolder(args.data + '/val_images', transform=data_transforms_dev).class_to_idx
     val_images = {cat: [img for img in os.listdir(os.path.join(val_dir, cat)) if 'jpg' in img] for cat in os.listdir(val_dir)}
 
-    y_true, y_pred, miss_pred, n_miss = missing_pred(model, val_images, val_index)
+    y_true, y_pred, miss_pred, n_miss, miss_prob = missing_pred(model, val_images, val_index)
+
+    print(miss_prob)
 
     print(classification_report(y_true, y_pred, target_names=list(val_index.keys())))
 
