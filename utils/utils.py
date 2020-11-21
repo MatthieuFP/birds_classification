@@ -166,18 +166,11 @@ def add_weight_decay(model, l2_value, skip_list=()):
     return [{'params': no_decay, 'weight_decay': 0.}, {'params': decay, 'weight_decay': l2_value}]
 
 
-class LabelSmoothingLoss(nn.Module):
-    def __init__(self, classes, smoothing=0.0, dim=-1):
-        super(LabelSmoothingLoss, self).__init__()
-        self.confidence = 1.0 - smoothing
-        self.smoothing = smoothing
-        self.cls = classes
-        self.dim = dim
-
-    def forward(self, pred, target):
-        pred = pred.log_softmax(dim=self.dim)
-        with torch.no_grad():
-            true_dist = torch.zeros_like(pred)
-            true_dist.fill_(self.smoothing / (self.cls - 1))
-            true_dist.scatter_(1, target.unsqueeze(1), self.confidence)
-        return torch.mean(torch.sum(-true_dist * pred, dim=self.dim))
+def smooth_loss(target, output, n_classes, smoothing):
+    assert 0 <= smoothing < 1
+    output = output.log_softmax(dim=-1)
+    with torch.no_grad():
+        true_dist = torch.zeros_like(output, device=target.device)
+        true_dist.fill_(smoothing / (n_classes - 1))
+        true_dist.scatter_(1, target.unsqueeze(1), 1 - smoothing)
+    return torch.mean(torch.sum(-true_dist * output, dim=-1))

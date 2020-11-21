@@ -88,11 +88,12 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
                     output = model(weak_unlabeled_data)
 
                 if loss_smoothing:
-                    criterion = LabelSmoothingLoss(classes=20, smoothing=0.3)
+                    unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * smooth_loss(target=target, output=output,
+                                                                                      n_classes=20, smoothing=0.2)
                 else:
                     criterion = torch.nn.CrossEntropyLoss(reduction='mean')
-
-                unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
+                    unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
+                    
                 unlabeled_loss.backward()
 
                 train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
