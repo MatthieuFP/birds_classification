@@ -154,3 +154,13 @@ def imshow(inp, title=None):
     if title is not None:
         plt.title(title)
     plt.pause(0.001)
+
+
+def add_weight_decay(model, l2_value, skip_list=()):
+    decay, no_decay = [], []
+    for name, param in model.named_parameters():
+        if len(param.shape) == 1 or name.endswith(".bias") or name in skip_list:
+            no_decay.append(param)
+        else:
+            decay.append(param)
+    return [{'params': no_decay, 'weight_decay': 0.}, {'params': decay, 'weight_decay': l2_value}]

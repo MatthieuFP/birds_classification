@@ -22,6 +22,7 @@ def pil_loader(path):
 def missing_pred(model, val_images, val_labels):
     y_true = []
     y_pred = []
+    miss_prob = []
     miss = []
     n_miss = 0
     for cat, imgs in val_images.items():
@@ -34,6 +35,7 @@ def missing_pred(model, val_images, val_labels):
             if pred != val_labels[cat]:
                 n_miss += 1
                 miss.append(pil_loader(path_img))
+                miss_prob.append(torch.max(output).item())
 
             y_pred.append(pred)
             y_true.append(val_labels[cat])
