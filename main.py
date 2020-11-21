@@ -22,8 +22,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
     model.train()
     train_batch_loss = []
     loss_weights = torch.ones(20)
-    loss_weights[16] = 3
-    loss_weights[15] = 3
+    loss_weights[[1, 13, 16]] = 4
     loss_weights = loss_weights.to(device)
 
     pdb.set_trace()

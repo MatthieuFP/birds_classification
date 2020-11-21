@@ -29,9 +29,16 @@ def missing_pred(model, val_images, val_labels):
         for img in imgs:
             path_img = os.path.join(val_dir, cat, img)
             data = data_transforms_dev(pil_loader(path_img)).unsqueeze(0).to(device)
+            reverse_data = data_reverse(pil_loader(path_img)).unsqueeze(0).to(device)
 
             output = F.softmax(model(data), dim=-1)
+            reverse_output = F.softmax(model(reverse_data), dim=-1)
             pred = torch.argmax(output, dim=-1).item()
+            reverse_pred = torch.argmax(reverse_output, dim=-1)
+            if torch.max(output, dim=-1) < torch.max(reverse_output, dim=-1):
+                pred = reverse_pred
+                output = reverse_output
+
             if pred != val_labels[cat]:
                 n_miss += 1
                 miss.append(pil_loader(path_img))
@@ -68,6 +75,9 @@ if __name__ == '__main__':
     path_model = os.path.join(path_id, 'model.pt')
     val_dir = os.path.join(args.data, 'val_images')
     data_transforms_dev = data_transformation(model=args.model, size=args.size, train=0)
+    data_reverse = transforms.Compose([transforms.RandomHorizontalFlip(1.), transforms.Resize((224, 224)),
+                                       transforms.ToTensor(), transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                                                   std=[0.229, 0.224, 0.225])])
 
     # Load model
     model = load_model(path_model=path_model,
@@ -83,6 +93,7 @@ if __name__ == '__main__':
 
     y_true, y_pred, miss_pred, n_miss, miss_prob = missing_pred(model, val_images, val_index)
 
+    print(n_miss/176)
     print(miss_prob)
 
     print(classification_report(y_true, y_pred, target_names=list(val_index.keys())))
