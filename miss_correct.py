@@ -34,7 +34,7 @@ def missing_pred(model, val_images, val_labels):
             output = F.softmax(model(data), dim=-1)
             reverse_output = F.softmax(model(reverse_data), dim=-1)
             pred = torch.argmax(output, dim=-1).item()
-            reverse_pred = torch.argmax(reverse_output, dim=-1)
+            reverse_pred = torch.argmax(reverse_output, dim=-1).item()
             if torch.max(output, dim=-1) < torch.max(reverse_output, dim=-1):
                 pred = reverse_pred
                 output = reverse_output
