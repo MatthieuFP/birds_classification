@@ -92,10 +92,14 @@ class SSL_ViT(nn.Module):
 
 
 class stacked_models(nn.Module):
-    def __init__(self, cfg, drop, pretrained=True):
+    def __init__(self, cfg, drop, pretrained=True, use_resnext=1):
         super(stacked_models, self).__init__()
         self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.2)
-        self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
+        self.use_resnext = use_resnext
+        if self.use_resnext:
+            self.resnext = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x48d_wsl')
+        else:
+            self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
         self.layer1 = nn.Linear(2000, 512)
         self.layer2 = nn.Linear(512, 20)
         nn.init.xavier_uniform_(self.layer1.weight)
@@ -105,10 +109,16 @@ class stacked_models(nn.Module):
 
     def forward(self, x):
         x1 = self.vit(x)
-        x2 = self.inceptionv3(self.resize(x))
+        if self.use_resnext:
+            x2 = self.resnext(x)
+        else:
+            x2 = self.inceptionv3(self.resize(x))
         x_cat = torch.cat((x1, x2), dim=-1)
         x_out = self.layer1(self.dropout(x_cat))
         x_out = self.layer2(self.dropout(x_out))
         return x_out
+
+
+model = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x48d_wsl')
 
 
