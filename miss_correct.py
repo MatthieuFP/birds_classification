@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
     y_true, y_pred, miss_pred, n_miss, miss_prob = missing_pred(model, val_images, val_index)
 
-    print(n_miss/176)
+    print(1 - n_miss/176)
     print(miss_prob)
 
     print(classification_report(y_true, y_pred, target_names=list(val_index.keys())))

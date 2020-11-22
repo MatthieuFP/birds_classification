@@ -35,7 +35,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     train_batch_unlabeled_loss = []
     train_batch_labeled_loss = []
-    n_unlabeled_chosen = 0
+    # n_unlabeled_chosen = 0
     n_sample = 0
     n_labeled = 0
 
@@ -43,92 +43,98 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
 
     model.train()
 
-    for batch_idx in tqdm_notebook(range(n_batches)):  # tqdm_notebook
+    for batch_unlabeled, ((weak_unlabeled_data, strong_unlabeled_data), _) in tqdm_notebook(enumerate(unlabeled_loader, 1)):
 
-        if not (batch_idx + 1) % log_interval:
-            print('{} batch : {} test unlabeled examples - {} sample examples'.format(batch_idx + 1, n_sample,
-                                                                                      n_labeled))
+    # for batch_idx in tqdm_notebook(range(n_batches)):  # tqdm_notebook
 
-        p = random.random()
-        if p < proba:  # 2 unlabeled examples for 1 labelled for instance
-            n_unlabeled_chosen += batch_size
+        # if not (batch_idx + 1) % log_interval:
+        #    print('{} batch : {} test unlabeled examples - {} sample examples'.format(batch_idx + 1, n_sample,
+        #                                                                              n_labeled))
 
-            pdb.set_trace()
-            (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
-            del _  # memory usage
+        # p = random.random()
+        # if p < proba:  # 2 unlabeled examples for 1 labelled for instance
+        #    n_unlabeled_chosen += batch_size
 
-            if use_cuda:
-                weak_unlabeled_data = weak_unlabeled_data.cuda()
+        #    pdb.set_trace()
+        #    (weak_unlabeled_data, strong_unlabeled_data), _ = next(iter(unlabeled_loader))
+        del _  # memory usage
 
-            model.eval()
-            output_unlabeled = model(weak_unlabeled_data)
-            _, pseudo_labels = torch.max(output_unlabeled, 1)
-            del _  # memory usage
+        if use_cuda:
+            weak_unlabeled_data = weak_unlabeled_data.cuda()
 
-            probs = F.softmax(output_unlabeled, dim=-1)
-            index = torch.where(probs.max(dim=-1).values > threshold)[0].cuda()
+        model.eval()
+        output_unlabeled = model(weak_unlabeled_data)
+        _, pseudo_labels = torch.max(output_unlabeled, 1)
+        del _  # memory usage
 
-            if len(index):  # index.size()
-                n_sample += len(index)
-                weak_unlabeled_data = weak_unlabeled_data[index]
-                pseudo_labels = pseudo_labels[index]
+        probs = F.softmax(output_unlabeled, dim=-1)
+        index = torch.where(probs.max(dim=-1).values > threshold)[0].cuda()
 
-                model.train()
-                if strong_augmentation:
-                    pdb.set_trace()
+        if len(index):  # index.size()
+            n_sample += len(index)
+            weak_unlabeled_data = weak_unlabeled_data[index]
+            pseudo_labels = pseudo_labels[index]
 
-                    strong_unlabeled_data = strong_unlabeled_data[index]
-                    if use_cuda:
-                        strong_unlabeled_data = strong_unlabeled_data.cuda()
+            model.train()
+            if strong_augmentation:
+                pdb.set_trace()
+
+                strong_unlabeled_data = strong_unlabeled_data[index]
+                if use_cuda:
+                    strong_unlabeled_data = strong_unlabeled_data.cuda()
 
                     # Unlabeled loss with pseudo labels
-                    output = model(strong_unlabeled_data)
+                output = model(strong_unlabeled_data)
 
-                else:
-                    output = model(weak_unlabeled_data)
+            else:
+                output = model(weak_unlabeled_data)
 
-                if loss_smoothing:
-                    unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * smooth_loss(target=target, output=output,
-                                                                                      n_classes=20,
-                                                                                      smoothing=smooth_prob)
-                else:
-                    criterion = torch.nn.CrossEntropyLoss(reduction='mean')
-                    unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
+            if loss_smoothing:
+                unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * smooth_loss(target=pseudo_labels,
+                                                                                  output=output,
+                                                                                  n_classes=20,
+                                                                                  smoothing=smooth_prob)
+            else:
+                criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+                unlabeled_loss = alpha(epoch, T2=T2, factor=factor) * criterion(output, pseudo_labels)
 
-                unlabeled_loss.backward()
+            unlabeled_loss.backward()
 
-                train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
-                optimizer.step()
-                optimizer.zero_grad()
+            train_batch_unlabeled_loss.append(unlabeled_loss.data.item() / len(index))  # Save unlabeled loss
+            optimizer.step()
+            optimizer.zero_grad()
 
-                del output, output_unlabeled, probs, pseudo_labels
+            del output, output_unlabeled, probs, pseudo_labels
 
-            del weak_unlabeled_data, strong_unlabeled_data
+        del weak_unlabeled_data, strong_unlabeled_data
             # Free space from GPU memory
 
-        else:
-            n_labeled += 1
+    for batch_labeled, (data, target) in tqdm_notebook(enumerate(train_loader, 1)):
+            #n_labeled += 1
             # Normal training procedure
-            (data, target) = next(iter(train_loader))
+        (data, target) = next(iter(train_loader))
 
-            if use_cuda:
-                data = data.cuda()
-                target = target.cuda()
+        if use_cuda:
+            data = data.cuda()
+            target = target.cuda()
 
-            output = model(data)
+        output = model(data)
 
-            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
-            labeled_loss = criterion(output, target)
+        loss_weights = torch.ones(20)
+        loss_weights[0] = 4
+        loss_weights = loss_weights.to(device)  # To balance the fact there is no groove bill Ani in the unlabeled set
+        criterion = torch.nn.CrossEntropyLoss(loss_weights)       # reduction='mean'
+        labeled_loss = criterion(output, target)
 
-            # Backpropagation
-            optimizer.zero_grad()
-            labeled_loss.backward()
-            optimizer.step()
+        # Backpropagation
+        optimizer.zero_grad()
+        labeled_loss.backward()
+        optimizer.step()
 
-            train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
+        train_batch_labeled_loss.append(labeled_loss.item() / batch_size)
 
-            # Remove space from GPU memory
-            del data, target, output
+        # Remove space from GPU memory
+        del data, target, output
 
 
         # if batch_idx % log_interval == 0:
@@ -149,7 +155,7 @@ def pseudo_labelling(model, epoch, train_loader, unlabeled_loader, use_cuda, log
     train_unlabeled_loss.append(np.mean(train_batch_unlabeled_loss))
     train_labeled_loss.append(np.mean(train_batch_labeled_loss))
     print('\n')
-    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, n_unlabeled_chosen), stdout)
+    stdout = logging('Unlabeled Sample = {} out of {}'.format(n_sample, len(unlabeled_loader.dataset)), stdout)
     stdout = logging('Unlabeled Train loss Epoch {} : {}'.format(epoch, train_unlabeled_loss[-1]), stdout)
 
     return model, train_unlabeled_loss, train_labeled_loss, stdout
