@@ -243,7 +243,7 @@ if __name__ == '__main__':
     parser.add_argument('--factor', type=int, default=2, help="factor value")
     parser.add_argument('--proba', type=float, default=0.66)
     parser.add_argument('--loss_smoothing', type=int, default=0)
-    parser.add_argument('--smooth_prob', type=str, default=0.2)
+    parser.add_argument('--smooth_prob', type=float, default=0.2)
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
