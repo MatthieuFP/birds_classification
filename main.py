@@ -18,7 +18,8 @@ from uuid import uuid4
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
           accumulation_steps, device, blurring=0):
 
-    optimizer.zero_grad()
+    optimizer_vit.zero_grad()
+    optimizer_rnext.zero_grad()
     model.train()
     train_batch_loss = []
     # loss_weights = torch.ones(20)
@@ -42,8 +43,11 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         loss.backward()
 
         if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
-            optimizer.step()
-            optimizer.zero_grad()
+            optimizer_vit.step()
+            optimizer_vit.zero_grad()
+            
+            optimizer_rnext.step()
+            optimizer_rnext.zero_grad()
 
         # optimizer.step()
         if batch_idx % log_interval == 0:
@@ -156,6 +160,10 @@ if __name__ == '__main__':
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
+    parser.add_argument('--lr_vit', type=float, default=2e-5, metavar='LR',
+                        help='learning rate (default: 0.01)')
+    parser.add_argument('--lr_rnext', type=float, default=1e-4, metavar='LR',
+                        help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--optimizer', type=str, default='adam', help='Adam or SGD optimizer')
@@ -253,24 +261,24 @@ if __name__ == '__main__':
         stdout.append(' ')
 
     # Optimizer
-    params = add_weight_decay(model, args.weight_decay)
-    if args.optimizer == 'adam':
-        optimizer = optim.Adam(params, lr=args.lr)
+    # params = add_weight_decay(model, args.weight_decay)
+    # if args.optimizer == 'adam':
+    #    optimizer = optim.Adam(params, lr=args.lr)
         # optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    elif args.optimizer == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    # elif args.optimizer == 'sgd':
+    #    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 
-    #optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
+    optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
 
-    #fc_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]
+    rnext_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]
     #pdb.set_trace()
-    #optimizer_inc = torch.optim.SGD(fc_parameters, lr=args.lr_inc,
-    #                                momentum=args.momentum,
-    #                                weight_decay=args.weight_decay)
+    optimizer_rnext = torch.optim.SGD(rnext_parameters, lr=args.lr_rnext,
+                                      momentum=args.momentum,
+                                      weight_decay=args.weight_decay)
 
 
     # Scheduler
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_vit, T_max=args.epochs)
     #scheduler_vit = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_vit, T_max=args.epochs)
     #scheduler_inc = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_inc, T_max=args.epochs)
 
