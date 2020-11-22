@@ -7,7 +7,7 @@ from utils.utils import *
 import numpy as np
 import torch.optim as optim
 from torchvision import datasets
-from tqdm import tqdm
+from tqdm import tqdm, tqdm_notebook
 from model import *
 from early_stopping.pytorchtools import EarlyStopping
 from torch.utils.tensorboard import SummaryWriter
@@ -16,17 +16,18 @@ from uuid import uuid4
 
 
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
-          accumulation_steps, device, blurring=0):
+          accumulation_steps, device, blurring=0, loss_weights=0):
 
     optimizer.zero_grad()
     model.train()
     train_batch_loss = []
-    # loss_weights = torch.ones(20)
-    # loss_weights[[1, 13, 16]] = 4
-    # loss_weights = loss_weights.to(device)
+    if loss_weights:
+        loss_weights = torch.ones(20)
+        loss_weights[[1, 13, 16]] = 4
+        loss_weights = loss_weights.to(device)
 
     pdb.set_trace()
-    for batch_idx, (data, target) in tqdm(enumerate(train_loader)):
+    for batch_idx, (data, target) in tqdm(enumerate(train_loader)):  # tqdm_notebook
         n_iter = batch_idx + (epoch - 1) * n_batches
 
         if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
@@ -35,25 +36,25 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         if use_cuda:
             data, target = data.cuda(), target.cuda()
 
-        # optimizer.zero_grad()
         output = model(data)
-        criterion = torch.nn.CrossEntropyLoss(reduction='mean')   # loss_weights / reduction='mean'
+        if loss_weights:
+            criterion = torch.nn.CrossEntropyLoss(loss_weights)
+        else:
+            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+
         loss = criterion(output, target)
         loss.backward()
 
-        if (batch_idx + 1) % accumulation_steps == 0:  # Gradient accumulation to handle limit of GPU RAM
+        if not (batch_idx + 1) % accumulation_steps:  # Gradient accumulation to handle limit of GPU RAM
             optimizer.step()
             optimizer.zero_grad()
 
         # optimizer.step()
-        if batch_idx % log_interval == 0:
-          #  writer.add_histogram('classifier', model.classifier.weight, n_iter)  # Check classifier weights
-          #  writer.add_histogram('grad_classifier', model.classifier.weight.grad, n_iter)  # Check classifier gradient
-          #  try:
-          #      writer.add_histogram('linear_layer', model.linear.weight, n_iter)  # Check linear layer weights
-          #      writer.add_histogram('grad_linear', model.linear.weight.grad, n_iter)  # Check linear layer gradient
-          #  except:
-          #      continue
+        if not (batch_idx + 1) % log_interval:
+            writer.add_histogram('layer1', model.layer1.weight, n_iter)  # Check layer1 weights
+            writer.add_histogram('layer1', model.layer1.weight.grad, n_iter)  # Check layer1 gradient
+            writer.add_histogram('layer2', model.layer2.weight, n_iter)  # Check layer1 weights
+            writer.add_histogram('layer2', model.layer2.weight.grad, n_iter)  # Check layer1 gradient
 
             logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
@@ -156,10 +157,6 @@ if __name__ == '__main__':
                         help='number of epochs to train (default: 10)')
     parser.add_argument('--lr', type=float, default=1e-4, metavar='LR',
                         help='learning rate (default: 0.01)')
-    parser.add_argument('--lr_vit', type=float, default=2e-5, metavar='LR',
-                        help='learning rate (default: 0.01)')
-    parser.add_argument('--lr_rnext', type=float, default=1e-4, metavar='LR',
-                        help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
     parser.add_argument('--optimizer', type=str, default='adam', help='Adam or SGD optimizer')
@@ -182,6 +179,7 @@ if __name__ == '__main__':
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM"),
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
     parser.add_argument('--blurring', type=int, default=0, help="Perform Gaussian blur or not")
+    parser.add_argument('--loss_weights', type=int, default=0, help="Apply loss weight of not")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -249,7 +247,8 @@ if __name__ == '__main__':
                    "vertical_flip": args.vertical_flip,
                    "random_rotation": args.random_rotation,
                    "Gaussian blur": args.blurring,
-                   "erasing": args.erasing}
+                   "erasing": args.erasing,
+                   "loss weight": args.loss_weight}
         if args.model == 'vit':
             results['cfg'] = args.cfg
 
@@ -259,25 +258,14 @@ if __name__ == '__main__':
     # Optimizer
     params = add_weight_decay(model, args.weight_decay)
     if args.optimizer == 'adam':
-        optimizer = optim.Adam(params, lr=args.lr)
-        optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        optimizer = optim.Adam(params, lr=args.lr, weight_decay=args.weight_decay)
     elif args.optimizer == 'sgd':
         optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-
-    # optimizer_vit = torch.optim.Adam(model.vit.parameters(), lr=args.lr_vit, weight_decay=args.weight_decay)
-
-    # rnext_parameters = [value for name, value in model.named_parameters() if 'vit' not in name]
-    ##pdb.set_trace()
-    # optimizer_rnext = torch.optim.SGD(rnext_parameters, lr=args.lr_rnext,
-    #                                  momentum=args.momentum,
-    #                                  weight_decay=args.weight_decay)
-
+    else:
+        raise NameError("Non-recognized optimizer - please use --optimizer adam or --optimizer sgd (default: adam)")
 
     # Scheduler
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
-    #scheduler_vit = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_vit, T_max=args.epochs)
-    #scheduler_inc = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer_inc, T_max=args.epochs)
-
 
     # Set up early stopping
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=os.path.join(path_result, 'model.pt'))
