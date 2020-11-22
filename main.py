@@ -57,7 +57,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
 
             logger.info('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                 epoch, batch_idx * len(data), len(train_loader.dataset),
-                100. * batch_idx / len(train_loader), loss.data.item()))
+                100. * batch_idx / len(train_loader), np.mean(train_batch_loss)))
 
         # pdb.set_trace()
         train_batch_loss.append(loss.data.item() / batch_size)
