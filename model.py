@@ -92,14 +92,10 @@ class SSL_ViT(nn.Module):
 
 
 class stacked_models(nn.Module):
-    def __init__(self, cfg, drop, pretrained=True, use_resnet=1):
+    def __init__(self, cfg, drop, pretrained=True):
         super(stacked_models, self).__init__()
         self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.2)
-        self.use_resnet = use_resnet
-        if self.use_resnet:
-            self.resnet = models.resnet152(pretrained=True)
-        else:
-            self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
+        self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
         self.layer1 = nn.Linear(2000, 512)
         self.layer2 = nn.Linear(512, 20)
         nn.init.xavier_uniform_(self.layer1.weight)
@@ -109,10 +105,7 @@ class stacked_models(nn.Module):
 
     def forward(self, x):
         x1 = self.vit(x)
-        if self.use_resnet:
-            x2 = self.resnet(x)
-        else:
-            x2 = self.inceptionv3(self.resize(x))
+        x2 = self.inceptionv3(self.resize(x))
         x_cat = torch.cat((x1, x2), dim=-1)
         x_out = self.layer1(self.dropout(x_cat))
         x_out = self.layer2(self.dropout(x_out))
