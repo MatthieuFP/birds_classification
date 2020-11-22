@@ -97,9 +97,9 @@ class stacked_models(nn.Module):
         self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.2)
         self.use_resnet = use_resnet
         if self.use_resnet:
-            self.resnet = models.resnet152(pretrained=True, drop=drop)
+            self.resnet = models.resnet152(pretrained=True)
         else:
-            self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False, drop=drop)
+            self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
         self.layer1 = nn.Linear(2000, 512)
         self.layer2 = nn.Linear(512, 20)
         nn.init.xavier_uniform_(self.layer1.weight)
