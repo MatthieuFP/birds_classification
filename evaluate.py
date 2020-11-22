@@ -79,7 +79,7 @@ for f in tqdm(test_images):
 
     output = F.softmax(model(data), dim=-1)
     reverse_output = F.softmax(model(reverse_data), dim=-1)
-    pred = torch.argmax(output, dim=-1)       # output.data.max(1, keepdim=True)[1]
+    pred = torch.argmax(output, dim=-1)
     reverse_pred = torch.argmax(reverse_output, dim=-1)
 
     if torch.max(output, dim=-1) < torch.max(reverse_output, dim=-1):

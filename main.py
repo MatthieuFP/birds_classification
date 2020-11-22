@@ -109,7 +109,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blu
 
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, device, blurring=0):
+         early_stopping, writer, stdout, accumulation_steps, device, blurring=0, loss_weight=0):
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -118,7 +118,8 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
-                                          stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring)
+                                          stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring,
+                                          loss_weight)
 
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
                                                         blurring)
@@ -179,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM"),
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
     parser.add_argument('--blurring', type=int, default=0, help="Perform Gaussian blur or not")
-    parser.add_argument('--loss_weights', type=int, default=0, help="Apply loss weight of not")
+    parser.add_argument('--loss_weight', type=int, default=0, help="Apply loss weight of not")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -277,7 +278,8 @@ if __name__ == '__main__':
                                                                          train_loader, val_loader, use_cuda,
                                                                          args.log_interval, scheduler,
                                                                          early_stopping, writer, stdout,
-                                                                         args.accumulation_steps, device, args.blurring)
+                                                                         args.accumulation_steps, device, args.blurring,
+                                                                         args.loss_weight)
 
     results['train_loss'] = train_loss
     results['val_loss'] = val_loss
