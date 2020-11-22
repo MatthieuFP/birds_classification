@@ -63,7 +63,7 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         train_batch_loss.append(loss.data.item() / batch_size)
         writer.add_scalar('train_loss', loss.data.item(), n_iter)
 
-    del data, target  # leave space on gpu
+        del data, target  # leave space on gpu
 
     # pdb.set_trace()
     train_loss.append(np.mean(train_batch_loss))
@@ -76,23 +76,24 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blu
     model.eval()
     validation_loss = 0
     correct = 0
-    for data, target in tqdm(val_loader):
+    with torch.no_grad():
+        for data, target in tqdm(val_loader):
 
-        if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
-            g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
-            data = g_blur(data)
+            if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
+                g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
+                data = g_blur(data)
 
-        if use_cuda:
-            data, target = data.cuda(), target.cuda()
-        output = model(data)
-        # sum up batch loss
-        criterion = torch.nn.CrossEntropyLoss(reduction='mean')
-        validation_loss += criterion(output, target).data.item()
-        # get the index of the max log-probability
-        pred = output.data.max(1, keepdim=True)[1]
-        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+            if use_cuda:
+                data, target = data.cuda(), target.cuda()
+            output = model(data)
+            # sum up batch loss
+            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+            validation_loss += criterion(output, target).data.item()
+            # get the index of the max log-probability
+            pred = output.data.max(1, keepdim=True)[1]
+            correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
-        del data, target  # leave space on GPU
+            del data, target  # leave space on GPU
 
     validation_loss /= len(val_loader.dataset)
     score = 100. * correct / len(val_loader.dataset)

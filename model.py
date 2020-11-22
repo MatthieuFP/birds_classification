@@ -97,7 +97,7 @@ class stacked_models(nn.Module):
         self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.2)
         self.use_resnext = use_resnext
         if self.use_resnext:
-            self.resnext = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x48d_wsl')
+            self.resnext = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x32d_wsl')
         else:
             self.inceptionv3 = models.inception_v3(pretrained=True, aux_logits=False)
         self.layer1 = nn.Linear(2000, 512)
@@ -117,8 +117,4 @@ class stacked_models(nn.Module):
         x_out = self.layer1(self.dropout(x_cat))
         x_out = self.layer2(self.dropout(x_out))
         return x_out
-
-
-model = torch.hub.load('facebookresearch/WSL-Images', 'resnext101_32x48d_wsl')
-
 
