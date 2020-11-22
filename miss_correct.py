@@ -89,6 +89,7 @@ if __name__ == '__main__':
     model.eval()
 
     val_index = datasets.ImageFolder(args.data + '/val_images', transform=data_transforms_dev).class_to_idx
+    index_to_class = {v: k for k, v in val_index.items()}
     val_images = {cat: [img for img in os.listdir(os.path.join(val_dir, cat)) if 'jpg' in img] for cat in os.listdir(val_dir)}
 
     y_true, y_pred, miss_pred, n_miss, miss_prob = missing_pred(model, val_images, val_index)
@@ -102,6 +103,7 @@ if __name__ == '__main__':
     gs = fig.add_gridspec(8, 1)
     for idx in range(n_miss):
         axs = fig.add_subplot(gs[idx])
+        axs.set_title('Pred : {} - Ground Truth : {}'.format(index_to_class[y_pred[idx]], index_to_class[y_true[idx]]))
         axs.imshow(miss_pred[idx])
         axs.set_axis_off()
 
