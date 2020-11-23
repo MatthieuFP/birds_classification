@@ -1,3 +1,11 @@
+# -*- coding: utf-8 -*-
+
+"""
+Created on Sat Nov 7 12:47:39 2020
+
+@author: matthieufuteral-peter
+"""
+
 import os
 import cv2
 from PIL import Image
