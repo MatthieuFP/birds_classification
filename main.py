@@ -257,7 +257,7 @@ if __name__ == '__main__':
         raise NameError("Non-recognized optimizer - please use --optimizer adam or --optimizer sgd (default: adam)")
 
     # Scheduler
-    scheduler = optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=0.75, last_epoch=-1, verbose=False)
+    scheduler = optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=lambda epoch: 0.9, last_epoch=-1, verbose=False)
 
     # Set up early stopping
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=os.path.join(path_result, 'model.pt'))
