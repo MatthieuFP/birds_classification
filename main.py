@@ -16,15 +16,11 @@ from uuid import uuid4
 
 
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
-          accumulation_steps, device, blurring=0, loss_weights=0):
+          accumulation_steps, device, blurring=0):
 
     optimizer.zero_grad()
     model.train()
     train_batch_loss = []
-    if loss_weights:
-        loss_weights = torch.ones(20)
-        loss_weights[[1, 13, 16]] = 4
-        loss_weights = loss_weights.to(device)
 
     pdb.set_trace()
     for batch_idx, (data, target) in tqdm(enumerate(train_loader)):  # tqdm_notebook
@@ -33,14 +29,12 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
         if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
             g_blur = transforms.GaussianBlur(11, sigma=(2, 10))
             data = g_blur(data)
+
         if use_cuda:
             data, target = data.cuda(), target.cuda()
 
         output = model(data)
-        if loss_weights:
-            criterion = torch.nn.CrossEntropyLoss(loss_weights)
-        else:
-            criterion = torch.nn.CrossEntropyLoss(reduction='mean')
+        criterion = torch.nn.CrossEntropyLoss(reduction='mean')
 
         loss = criterion(output, target)
         loss.backward()
@@ -109,7 +103,7 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blu
 
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler,
-         early_stopping, writer, stdout, accumulation_steps, device, blurring=0, loss_weight=0):
+         early_stopping, writer, stdout, accumulation_steps, device, blurring=0):
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -118,15 +112,14 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
-                                          stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring,
-                                          loss_weight)
+                                          stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring)
 
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
                                                         blurring)
 
-        scheduler.step()
-
         val_accuracy.append(accuracy)
+
+        scheduler.step()
 
         early_stopping(val_loss[-1], model, stdout)
         if early_stopping.early_stop:
@@ -180,7 +173,6 @@ if __name__ == '__main__':
     parser.add_argument('--accumulation_steps', type=int, default=1, help="Gradient accumulation for GPU RAM"),
     parser.add_argument('--size', type=int, default=224, help='size of the input images')
     parser.add_argument('--blurring', type=int, default=0, help="Perform Gaussian blur or not")
-    parser.add_argument('--loss_weight', type=int, default=0, help="Apply loss weight of not")
     args = parser.parse_args()
     use_cuda = torch.cuda.is_available()
     torch.manual_seed(args.seed)
@@ -248,8 +240,7 @@ if __name__ == '__main__':
                    "vertical_flip": args.vertical_flip,
                    "random_rotation": args.random_rotation,
                    "Gaussian blur": args.blurring,
-                   "erasing": args.erasing,
-                   "loss weight": args.loss_weight}
+                   "erasing": args.erasing}
         if args.model == 'vit':
             results['cfg'] = args.cfg
 
@@ -266,7 +257,7 @@ if __name__ == '__main__':
         raise NameError("Non-recognized optimizer - please use --optimizer adam or --optimizer sgd (default: adam)")
 
     # Scheduler
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
+    scheduler = optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=0.75, last_epoch=-1, verbose=False)
 
     # Set up early stopping
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=os.path.join(path_result, 'model.pt'))
@@ -278,8 +269,7 @@ if __name__ == '__main__':
                                                                          train_loader, val_loader, use_cuda,
                                                                          args.log_interval, scheduler,
                                                                          early_stopping, writer, stdout,
-                                                                         args.accumulation_steps, device, args.blurring,
-                                                                         args.loss_weight)
+                                                                         args.accumulation_steps, device, args.blurring)
 
     results['train_loss'] = train_loss
     results['val_loss'] = val_loss
