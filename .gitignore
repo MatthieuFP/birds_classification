@@ -1,3 +1,6 @@
+__pycache__
+.gitignore
+API_net
 bird_dataset
 cropped_birds
 experiment
@@ -5,5 +8,4 @@ nabirds
 cropped_NAbirds
 filtered_cropped_NAbirds
 semi_supervized_experiment
-confident_filtered_cropped_NAbirds
-confident9_filtered_cropped_NAbirds
+main.ipynb

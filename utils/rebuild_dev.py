@@ -1,11 +1,20 @@
 import os
-import glob
 import numpy as np
 from PIL import Image
 
 
 def copy_dev_to_train(categories, path_dev, path_train):
+    '''
+    Cut the content of the validation set and paste it into the train set
 
+    Parameters:
+        categories (list): list of the species category
+        path_dev (str): path to validation set
+        path_train (str): path to train set
+
+    Return:
+        None
+    '''
     for cat in categories:
 
         remove_list = []
@@ -29,7 +38,17 @@ def copy_dev_to_train(categories, path_dev, path_train):
 
 
 def build_dev_from_train(categories, path_dev, path_train):
+    '''
+    Randomly cut 15% of the train set to copy it into the dev set.
 
+    Parameters:
+        categories (list): list of the species category
+        path_dev (str): path to validation set
+        path_train (str): path to train set
+
+    Return:
+        None
+    '''
     for cat in categories:
 
         path_cat = os.path.join(path_train, cat)

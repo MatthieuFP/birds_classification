@@ -5,6 +5,12 @@ from .randaugment import RandAugmentMC
 
 
 class TransformFixMatch(object):
+    '''
+    Perform Strong and Weak transformation (except RandomErasing) as described in FixMatch paper
+
+    Return
+        tuple: (normalized weak transformation, normalized strong transformation)
+    '''
     def __init__(self, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
         self.weak = transforms.Compose([
             transforms.RandomHorizontalFlip(0.5),
@@ -20,7 +26,6 @@ class TransformFixMatch(object):
         self.normalize = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=mean, std=std)])
-            # transforms.RandomErasing(p=1, scale=(0.01, 0.01), ratio=(1., 1.))])
 
     def __call__(self, x):
         weak = self.weak(x)

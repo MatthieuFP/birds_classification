@@ -5,6 +5,20 @@ import pdb
 
 
 def check_missing_bb(dataset, cat, missing):
+    '''
+    Check which images in bird dataset are not in the cropped dataset. In other words, check the images on which
+    Mask R-CNN failed to detect any birds.
+
+    Parameters:
+        dataset (str) : 'train', 'test', 'val'
+        cat (str) : bird species if dataset = 'train' or 'val' - 'mistery_category' if dataset = 'test'
+        missing (dict) : dictionnary returned as output with updated missing bounding boxes
+
+    Returns:
+        dictionnary keys are 'train', 'test', 'val', values are dictionnaries with categories as keys and list of missing
+        images as values.
+    '''
+    assert dataset in ['train', 'test', 'val'], "dataset must be 'train', 'test' or 'dev'. Unrecognized dataset"
 
     missing[dataset][cat] = []
     path_cat_cropped = os.path.join(path_cropped, '{}_cropped'.format(dataset), cat)
@@ -23,6 +37,22 @@ def check_missing_bb(dataset, cat, missing):
 
 
 def create_missing_bb(dataset, cat, missing):
+    '''
+    Given a dataset and a category, print the images and asked the user to draw a bounding box around the bird by
+    clicking the upper left of the bird, press 'a' and then clicking the bottom right and press 'a'.
+    Press 'c' once the latter steps were completed to print the next image. Save the images in
+    './{dataset}_birds/{cat}'
+
+    Parameters:
+        dataset (str): 'train', 'test', 'val'
+        cat (str): categories if 'train', 'val', 'mistery_category' if 'test'
+        missing (dict): dict with path, cat and dataset of each image with no cropped bird
+
+    Returns:
+        None
+    '''
+
+    assert dataset in ['train', 'test', 'val'], "dataset must be 'train', 'test' or 'dev'. Unrecognized dataset"
 
     path_cat_cropped = os.path.join(path_cropped, '{}_cropped'.format(dataset), cat)
     path_cat_birds = os.path.join(path_birds, '{}_images'.format(dataset), cat)

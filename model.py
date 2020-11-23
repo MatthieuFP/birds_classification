@@ -1,4 +1,3 @@
-import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,9 +5,9 @@ import torchvision
 import torchvision.models as models
 import torchvision.transforms as transforms
 import timm
-import pdb
 
 nclasses = 20 
+
 
 class Net(nn.Module):
     def __init__(self):
@@ -57,12 +56,8 @@ class ViT(nn.Module):
         super(ViT, self).__init__()
         self.vit = timm.create_model(cfg, pretrained=pretrained, drop_rate=0.0)
         self.dropout = nn.Dropout(drop)
-        # self.leaky_relu = nn.LeakyReLU()
-        # self.linear = nn.Linear(1000, 128)
-        # self.classifier = nn.Linear(128, 20)
         self.classifier = nn.Linear(1000, 20)
 
-        # self.init_weights(self.linear)
         self.init_weights(self.classifier)
 
     def init_weights(self, layer):
@@ -71,24 +66,8 @@ class ViT(nn.Module):
 
     def forward(self, x):
         x = self.vit(x)
-        # x = self.leaky_relu(x)
-        # x = self.linear(x)
         output = self.classifier(self.dropout(x))
         return output
-
-
-class SSL_ViT(nn.Module):
-    def __init__(self, model):
-        super(SSL_ViT, self).__init__()
-        self.base = model
-        self._classifier = nn.Linear(20, 21, bias=False)
-        torch.nn.init.xavier_uniform_(self._classifier.weight)
-        #with torch.no_grad():
-        #    self._classifier.weight[:20] = torch.nn.Parameter(torch.eye(20), requires_grad=False)   # Freeze
-
-    def forward(self, x):
-        x = self.base(x)
-        return self._classifier(x)
 
 
 class stacked_models(nn.Module):

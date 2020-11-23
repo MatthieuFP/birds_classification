@@ -17,13 +17,36 @@ from uuid import uuid4
 
 def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout, writer, n_batches, batch_size,
           accumulation_steps, device, blurring=0):
+    '''
+    Training step
+
+    Parameters:
+        model (nn.Module pytorch model): pytorch model
+        epoch (int): n-th epoch
+        train_loader (DataLoader): loader of the training set
+        use_cuda (int): computing with GPU or not
+        log_interval (int): batch interval between saving weights value and printing loss
+        train_loss (list): list of the train loss per epoch
+        stdout (list): output file with printing messages - save in list format
+        writer (SummaryWriter object): write the weights, gradients and loss values on Tensorboard to be visualized later
+        n_batches (int): number of batches to perform 1 epoch
+        batch_size (int): number of examples by batch
+        device (torch.device object): 'cpu' device or 'cuda' device
+        accumulation_steps (int): perform backpropagation every accumulation_steps batches
+        blurring (int): 0 or 1. Gaussian blur the input or not
+
+    Return:
+        model (nn.Module pytorch model): pytorch model trained for 1 epoch
+        train_loss (list): list of loss values
+        stdout (list): list of string with messages printed in order to save output file.
+    '''
 
     optimizer.zero_grad()
     model.train()
     train_batch_loss = []
 
     pdb.set_trace()
-    for batch_idx, (data, target) in tqdm(enumerate(train_loader)):  # tqdm_notebook
+    for batch_idx, (data, target) in tqdm(enumerate(train_loader)):
         n_iter = batch_idx + (epoch - 1) * n_batches
 
         if blurring and random.random() < 0.25:  # Blur the Image with probability 1/4
@@ -68,6 +91,25 @@ def train(epoch, model, train_loader, use_cuda, log_interval, train_loss, stdout
 
 
 def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blurring=0):
+    '''
+    Perform one epoch on the validation set. Testing mode.
+
+    Parameters:
+        model (nn.Module pytorch model): pytorch model
+        epoch (int): n-th epoch
+        val_loader (DataLoader): loader of the validation set
+        use_cuda (int): computing with GPU or not
+        val_loss (list): list of the validation loss per epoch
+        stdout (list): output file with printing messages - save in list format
+        writer (SummaryWriter object): write the weights, gradients and loss values on Tensorboard to be visualized later
+        blurring (int): 0 or 1. Gaussian blur the input or not
+
+    Return:
+        val_loss (list): list of the validation loss per epoch (current one added)
+        score accuracy (float): mean accuracy on the validation set
+        stdout (list): output file with printing messages - save in list format
+        writer (SummaryWriter object): write the weights, gradients and loss values on Tensorboard to be visualized later
+    '''
     model.eval()
     validation_loss = 0
     correct = 0
@@ -104,6 +146,33 @@ def validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer, blu
 
 def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_interval, scheduler,
          early_stopping, writer, stdout, accumulation_steps, device, blurring=0):
+    '''
+    main function to train a model
+
+    Parameters:
+        model (nn.Module pytorch model): pytorch model
+        epochs (int): number of epochs
+        batch_size (int): number of examples by batch
+        train_loader (DataLoader): loader of the training set
+        val_loader (DataLoader): loader of the validation Images
+        use_cuda (int): computing with GPU or not
+        log_interval (int): batch interval between saving weights value and printing loss
+        scheduler (scheduler object): scheduler to update the learning rate at each epoch
+        early_stopping (EarlyStopping object): Stop training if val loss has been not decreasing for patience epochs
+        stdout (list): output file with printing messages - save in list format
+        writer (SummaryWriter object): write the weights, gradients and loss values on Tensorboard to be visualized later
+        accumulation_steps (int): perform backpropagation every accumulation_steps batches
+        device (torch.device object): 'cpu' device or 'cuda' device
+
+
+    Return:
+        model (nn.Module pytorch model): pytorch model trained
+        train_loss (list): list of training loss values by epoch
+        val_loss (list): list of validation loss values by epoch
+        val_accuracy (list): list of validation accuracy by epoch
+        epoch_time (list): time per epoch
+        stdout (list): list of string with messages printed in order to save output file.
+    '''
 
     train_loss, val_loss, val_accuracy, epoch_time = [], [], [], []
     n_batches = len(train_loader.dataset) // batch_size
@@ -111,16 +180,20 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
     for epoch in range(1, epochs + 1):
         stdout = logging("Epoch {} - Start TRAINING".format(epoch), stdout)
         t0 = time.time()
+        # Training for one epoch
         model, train_loss, stdout = train(epoch, model, train_loader, use_cuda, log_interval, train_loss,
                                           stdout, writer, n_batches, batch_size, accumulation_steps, device, blurring)
 
+        # Testing mode - test on the validation set
         val_loss, accuracy, stdout, writer = validation(model, epoch, val_loader, use_cuda, val_loss, stdout, writer,
                                                         blurring)
 
         val_accuracy.append(accuracy)
 
+        # Update learning rate
         scheduler.step()
 
+        # Early stopping
         early_stopping(val_loss[-1], model, stdout)
         if early_stopping.early_stop:
             message = "Early stopping"
@@ -128,6 +201,7 @@ def main(model, epochs, batch_size, train_loader, val_loader, use_cuda, log_inte
             stdout.append(message)
             break
 
+        # Save time elapsed
         time_elapsed = time.time() - t0
         stdout = logging("Epoch {} - Time elapsed : {}".format(epoch, time_elapsed), stdout)
         epoch_time.append(time_elapsed)
@@ -189,8 +263,8 @@ if __name__ == '__main__':
     if not os.path.isdir(args.experiment):
         os.makedirs(args.experiment)
 
-    # Load model
-    model = load_model(path_model=None,
+    # Load model - pretrained from ImageNet
+    model = load_model(path_model='',
                        model_type=args.model,
                        dropout=args.dropout,
                        cfg=args.cfg,
@@ -257,7 +331,7 @@ if __name__ == '__main__':
         raise NameError("Non-recognized optimizer - please use --optimizer adam or --optimizer sgd (default: adam)")
 
     # Scheduler
-    scheduler = optim.lr_scheduler.MultiplicativeLR(optimizer, lr_lambda=lambda epoch: 0.9, last_epoch=-1, verbose=False)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer=optimizer, T_max=args.epochs)
 
     # Set up early stopping
     early_stopping = EarlyStopping(patience=args.patience, verbose=True, path=os.path.join(path_result, 'model.pt'))
@@ -276,6 +350,7 @@ if __name__ == '__main__':
     results['val_accuracy'] = val_accuracy
     results['epoch_time'] = epoch_time
 
+    # Saving results
     with open(os.path.join(path_result, 'results.json'), 'w') as fj:
         json.dump(results, fj)
 

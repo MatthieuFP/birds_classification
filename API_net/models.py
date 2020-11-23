@@ -1,13 +1,6 @@
 # code from https://github.com/PeiqinZhuang/API-Net/blob/master/models.py
-import torch
-from torch import nn
-import torchvision
-from torchvision import models
-import numpy as np
-from model import ViT
 from utils.utils import *
 import timm
-import torch.nn.functional as F
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
