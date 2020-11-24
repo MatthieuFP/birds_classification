@@ -74,27 +74,22 @@ Display misclassified validation images, the corresponding probabilities, the pr
 ## References
 
 <a id="1">[1]</a> 
-Dijkstra, E. W. (1968). 
-Go to statement considered harmful. 
-Communications of the ACM, 11(3), 147-148.
-
-<a id="2">[2]</a> 
 Yuxin Wu and Alexander Kirillov and Francisco Massa and Wan-Yen Lo and Ross Girshick, 2019,
 [https://github.com/facebookresearch/detectron2](https://github.com/facebookresearch/detectron2).
 
-<a id="3">[3]</a> 
+<a id="2">[2]</a> 
 C. Ledig et al., 
 Photo-Realistic Single Image Super-Resolution Using a Generative Adversarial Network, 
 CVPR,
 2017,
 105-114.
  
-<a id="4">[4]</a> 
+<a id="3">[3]</a> 
 Dosovitskiy, Alexey and Beyer, Lucas and Kolesnikov, Alexander and Weissenborn, Dirk and Zhai, Xiaohua and Unterthiner, Thomas and Dehghani, Mostafa and Minderer, Matthias and Heigold, Georg and Gelly, Sylvain and Uszkoreit, Jakob and Houlsby, Neil,
 An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale,
 ICLR, 2021.
 
-<a id="5">[5]</a> 
+<a id="4">[4]</a> 
 Kihyuk Sohn and David Berthelot and Chun-Liang Li and Zizhao Zhang and Nicholas Carlini and Ekin D. Cubuk and Alex Kurakin and Han Zhang and Colin Raffel,
 FixMatch: Simplifying Semi-Supervised Learning with Consistency and Confidence, 2020,
 arXiv preprint arXiv:2001.07685.
