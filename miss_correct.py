@@ -71,8 +71,6 @@ if __name__ == '__main__':
     parser.add_argument('--experiment', type=str, default='semi_supervized_experiment')
     parser.add_argument('--RUN_ID', type=str, help='id of the model', required=True),
     parser.add_argument('--size', type=int, default=224, help='size of the images'),
-    parser.add_argument('--outfile', type=str, default='experiment/kaggle.csv', metavar='D',
-                        help="name of the output csv file")
     args = parser.parse_args()
 
     use_cuda = torch.cuda.is_available()
